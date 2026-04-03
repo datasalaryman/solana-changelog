@@ -28,6 +28,10 @@
     "repository": "solana-sdk"
   },
   {
+    "owner": "solana-foundation", 
+    "repository": "solana-go"
+  }, 
+  {
     "owner": "solana-foundation",
     "repository": "anchor"
   },
