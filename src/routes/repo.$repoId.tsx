@@ -1,7 +1,9 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useState } from 'react'
 import { Github, Loader2, CircleDot } from 'lucide-react'
-import { InfiniteScrollList } from '../components/InfiniteScrollList'
+import { ReleaseList } from '../components/ReleaseList'
+import { PullRequestList } from '../components/PullRequestList'
+import { DiscussionList } from '../components/DiscussionList'
 import { DashboardLayout } from '../components/DashboardLayout'
 import { useRepository } from '../hooks/useRepositories'
 import { useReleases, usePullRequests, useDiscussions } from '../hooks/useGitHubData'
@@ -146,9 +148,7 @@ function RepositoryPage() {
 
         {/* Active Tab Content */}
         {!isLoading && !errorMessage && activeTab === 'releases' && (
-          <InfiniteScrollList
-            title="Releases"
-            icon="releases"
+          <ReleaseList
             items={releases}
             hasNextPage={hasNextReleases}
             isFetchingNextPage={isFetchingNextReleases}
@@ -156,9 +156,7 @@ function RepositoryPage() {
           />
         )}
         {!isLoading && !errorMessage && activeTab === 'pullRequests' && (
-          <InfiniteScrollList
-            title="Pull Requests"
-            icon="pullRequests"
+          <PullRequestList
             items={pullRequests}
             hasNextPage={hasNextPullRequests}
             isFetchingNextPage={isFetchingNextPullRequests}
@@ -166,9 +164,7 @@ function RepositoryPage() {
           />
         )}
         {!isLoading && !errorMessage && activeTab === 'discussions' && (
-          <InfiniteScrollList
-            title="Discussions"
-            icon="discussions"
+          <DiscussionList
             items={discussions}
             hasNextPage={hasNextDiscussions}
             isFetchingNextPage={isFetchingNextDiscussions}

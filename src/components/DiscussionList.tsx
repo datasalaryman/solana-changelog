@@ -1,37 +1,31 @@
 import { useEffect, useRef, useCallback } from 'react'
-import { Tag, GitPullRequest, MessageSquare, ChevronRight, Loader2 } from 'lucide-react'
+import { MessageSquare, ChevronRight, Loader2 } from 'lucide-react'
+import type { DiscussionItem } from '../types/github'
 
-interface InfiniteScrollListProps {
-  title: string
-  icon: 'releases' | 'pullRequests' | 'discussions'
-  items: Array<{
-    id: string
-    title: string
-    subtitle?: string
-    status?: string
-    date?: string
-    url?: string
-  }>
+interface DiscussionListProps {
+  items: DiscussionItem[]
   hasNextPage: boolean
   isFetchingNextPage: boolean
   onLoadMore: () => void
 }
 
-const iconMap = {
-  releases: Tag,
-  pullRequests: GitPullRequest,
-  discussions: MessageSquare,
+function getStatusColor(status: string): string {
+  switch (status.toLowerCase()) {
+    case 'active':
+      return 'bg-blue-100 text-blue-700 border-blue-200'
+    case 'answered':
+      return 'bg-emerald-100 text-emerald-700 border-emerald-200'
+    default:
+      return 'bg-gray-100 text-gray-700 border-gray-200'
+  }
 }
 
-export function InfiniteScrollList({
-  title,
-  icon,
+export function DiscussionList({
   items,
   hasNextPage,
   isFetchingNextPage,
   onLoadMore,
-}: InfiniteScrollListProps) {
-  const Icon = iconMap[icon]
+}: DiscussionListProps) {
   const observerRef = useRef<IntersectionObserver | null>(null)
   const loadMoreRef = useRef<HTMLDivElement | null>(null)
 
@@ -67,14 +61,23 @@ export function InfiniteScrollList({
   return (
     <section className="border-b border-[var(--line)] py-6 last:border-b-0">
       <div className="mb-4 flex items-center gap-2">
-        <Icon className="h-5 w-5 text-[var(--lagoon-deep)]" />
-        <h2 className="font-semibold text-[var(--sea-ink)]">{title}</h2>
+        <MessageSquare className="h-5 w-5 text-[var(--lagoon-deep)]" />
+        <h2 className="font-semibold text-[var(--sea-ink)]">Discussions</h2>
       </div>
 
       <div className="space-y-2">
-        {items.map((item) => {
-          const content = (
-            <>
+        {items.map((item) => (
+          <a
+            key={item.id}
+            href={item.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group flex cursor-pointer items-center justify-between rounded-lg px-3 py-2.5 transition-colors hover:bg-[var(--link-bg-hover)]"
+          >
+            <div className="flex items-center gap-3 min-w-0 flex-1">
+              <span className={`flex-shrink-0 rounded-full border px-2 py-0.5 text-xs font-medium ${getStatusColor(item.status)}`}>
+                {item.status}
+              </span>
               <div className="min-w-0 flex-1">
                 <p className="truncate font-medium text-[var(--sea-ink)] group-hover:text-[var(--lagoon-deep)]">
                   {item.title}
@@ -85,50 +88,23 @@ export function InfiniteScrollList({
                   </p>
                 )}
               </div>
-              <div className="ml-4 flex items-center gap-3">
-                {item.status && (
-                  <span className="rounded-full bg-[var(--palm)]/10 px-2 py-0.5 text-xs font-medium text-[var(--palm)]">
-                    {item.status}
-                  </span>
-                )}
-                {item.date && (
-                  <span className="text-xs text-[var(--sea-ink-soft)]">
-                    {item.date}
-                  </span>
-                )}
-                <ChevronRight className="h-4 w-4 text-[var(--sea-ink-soft)] opacity-0 transition-opacity group-hover:opacity-100" />
-              </div>
-            </>
-          )
-
-          const className = "group flex cursor-pointer items-center justify-between rounded-lg px-3 py-2.5 transition-colors hover:bg-[var(--link-bg-hover)]"
-
-          if (item.url) {
-            return (
-              <a
-                key={item.id}
-                href={item.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={className}
-              >
-                {content}
-              </a>
-            )
-          }
-
-          return (
-            <div key={item.id} className={className}>
-              {content}
             </div>
-          )
-        })}
+            <div className="ml-4 flex items-center gap-3">
+              {item.date && (
+                <span className="text-xs text-[var(--sea-ink-soft)]">
+                  {item.date}
+                </span>
+              )}
+              <ChevronRight className="h-4 w-4 text-[var(--sea-ink-soft)] opacity-0 transition-opacity group-hover:opacity-100" />
+            </div>
+          </a>
+        ))}
       </div>
 
       {items.length === 0 && (
         <div className="flex flex-col items-center justify-center py-8 text-center">
           <p className="text-sm text-[var(--sea-ink-soft)]">
-            No {title.toLowerCase()} found
+            No discussions found
           </p>
         </div>
       )}
