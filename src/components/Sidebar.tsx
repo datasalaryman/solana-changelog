@@ -8,8 +8,8 @@ export function Sidebar() {
   const currentRepoId = params.repoId as string | undefined
 
   return (
-    <aside className="w-60 flex-shrink-0 border-r border-[var(--line)] bg-[var(--surface)] backdrop-blur-sm">
-      <div className="flex h-12 items-center border-b border-[var(--line)] px-3">
+    <aside className="flex h-full w-60 flex-shrink-0 flex-col border-r border-[var(--line)] bg-[var(--surface)] backdrop-blur-sm">
+      <div className="flex h-12 flex-shrink-0 items-center border-b border-[var(--line)] px-3">
         <div className="flex items-center gap-2">
           <div className="flex h-6 w-6 items-center justify-center rounded bg-gradient-to-br from-[var(--lagoon)] to-[var(--palm)]">
             <GitBranch className="h-3.5 w-3.5 text-white" />
@@ -18,7 +18,7 @@ export function Sidebar() {
         </div>
       </div>
 
-      <nav className="h-[calc(100vh-3rem)] overflow-y-auto p-2">
+      <nav className="flex-1 overflow-y-auto p-2">
         {isLoading && (
           <div className="flex items-center justify-center py-6">
             <Loader2 className="h-5 w-5 animate-spin text-[var(--lagoon-deep)]" />
