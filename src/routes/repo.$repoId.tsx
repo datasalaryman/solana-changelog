@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useState } from 'react'
-import { Github, Loader2, CircleDot, Tag, GitPullRequest, MessageSquare } from 'lucide-react'
+import { GitBranch, Loader2, CircleDot, Tag, GitPullRequest, MessageSquare } from 'lucide-react'
 import { ReleaseList } from '../components/ReleaseList'
 import { PullRequestList } from '../components/PullRequestList'
 import { DiscussionList } from '../components/DiscussionList'
@@ -102,7 +102,7 @@ function RepositoryPage() {
       <div className="mx-auto max-w-4xl">
         {/* Compact Header */}
         <div className="mb-6 flex items-center gap-3 border-b border-[var(--line)] pb-4">
-          <Github className="h-5 w-5 text-[var(--lagoon-deep)]" />
+          <GitBranch className="h-5 w-5 text-[var(--lagoon-deep)]" />
           <h1 className="text-lg font-semibold text-[var(--sea-ink)]">
             {repository.owner}/{repository.repository}
           </h1>

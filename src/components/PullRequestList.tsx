@@ -1,5 +1,5 @@
-import { useEffect, useRef, useCallback } from 'react'
-import { ChevronRight, Loader2 } from 'lucide-react'
+import { useEffect, useRef, useCallback, useState } from 'react'
+import { Loader2, Copy, Link2, Check } from 'lucide-react'
 import type { PullRequestItem } from '../types/github'
 
 interface PullRequestListProps {
@@ -20,6 +20,71 @@ function getStatusColor(status: string): string {
     default:
       return 'bg-gray-100 text-gray-700 border-gray-200'
   }
+}
+
+interface TooltipButtonProps {
+  children: React.ReactNode
+  tooltip: string
+  onClick: (e: React.MouseEvent) => void
+}
+
+function TooltipButton({ children, tooltip, onClick }: TooltipButtonProps) {
+  const [showTooltip, setShowTooltip] = useState(false)
+
+  return (
+    <div className="relative">
+      <button
+        onClick={onClick}
+        onMouseEnter={() => setShowTooltip(true)}
+        onMouseLeave={() => setShowTooltip(false)}
+        className="flex h-7 w-7 items-center justify-center rounded-md text-[var(--sea-ink-soft)] transition-colors hover:bg-[var(--sand)] hover:text-[var(--sea-ink)]"
+      >
+        {children}
+      </button>
+      {showTooltip && (
+        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 bg-gray-900 text-white text-xs rounded whitespace-nowrap z-10">
+          {tooltip}
+          <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900" />
+        </div>
+      )}
+    </div>
+  )
+}
+
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false)
+
+  const handleCopy = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    navigator.clipboard.writeText(text)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  return (
+    <TooltipButton tooltip="Copy title to clipboard" onClick={handleCopy}>
+      {copied ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
+    </TooltipButton>
+  )
+}
+
+function LinkButton({ url }: { url: string }) {
+  const [copied, setCopied] = useState(false)
+
+  const handleCopy = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    navigator.clipboard.writeText(url)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  return (
+    <TooltipButton tooltip="Copy GitHub link to clipboard" onClick={handleCopy}>
+      {copied ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Link2 className="h-3.5 w-3.5" />}
+    </TooltipButton>
+  )
 }
 
 export function PullRequestList({
@@ -86,13 +151,14 @@ export function PullRequestList({
                 )}
               </div>
             </div>
-            <div className="ml-4 flex items-center gap-3">
+            <div className="ml-4 flex items-center gap-1">
               {item.date && (
-                <span className="text-xs text-[var(--sea-ink-soft)]">
+                <span className="mr-2 text-xs text-[var(--sea-ink-soft)]">
                   {item.date}
                 </span>
               )}
-              <ChevronRight className="h-4 w-4 text-[var(--sea-ink-soft)] opacity-0 transition-opacity group-hover:opacity-100" />
+              <CopyButton text={item.title} />
+              <LinkButton url={item.url} />
             </div>
           </a>
         ))}
