@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { useState } from 'react'
 import { Github, Loader2, CircleDot } from 'lucide-react'
 import { HorizontalSection } from '../components/HorizontalSection'
 import { DashboardLayout } from '../components/DashboardLayout'
@@ -28,9 +29,12 @@ const dummyDiscussions = [
   { id: '3', title: 'RFC: Deprecate legacy RPC methods', subtitle: 'Started by @maintainer', status: 'Active', date: '3 days ago' },
 ]
 
+type TabType = 'releases' | 'pullRequests' | 'discussions'
+
 function RepositoryPage() {
   const { repoId } = Route.useParams()
   const { data: repository, isLoading } = useRepository(repoId)
+  const [activeTab, setActiveTab] = useState<TabType>('releases')
 
   if (isLoading) {
     return (
@@ -58,6 +62,12 @@ function RepositoryPage() {
     )
   }
 
+  const tabs = [
+    { id: 'releases' as TabType, label: 'Releases', count: dummyReleases.length },
+    { id: 'pullRequests' as TabType, label: 'Pull Requests', count: dummyPullRequests.length },
+    { id: 'discussions' as TabType, label: 'Discussions', count: dummyDiscussions.length },
+  ]
+
   return (
     <DashboardLayout>
       <div className="mx-auto max-w-4xl">
@@ -69,22 +79,54 @@ function RepositoryPage() {
           </h1>
         </div>
 
-        {/* Horizontal Sections */}
-        <HorizontalSection
-          title="Releases"
-          icon="releases"
-          items={dummyReleases}
-        />
-        <HorizontalSection
-          title="Pull Requests"
-          icon="pullRequests"
-          items={dummyPullRequests}
-        />
-        <HorizontalSection
-          title="Discussions"
-          icon="discussions"
-          items={dummyDiscussions}
-        />
+        {/* Tab Navigation */}
+        <div className="mb-6 border-b border-[var(--line)]">
+          <nav className="-mb-px flex gap-1">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`inline-flex items-center gap-2 border-b-2 px-4 py-2 text-sm font-medium transition-colors ${
+                  activeTab === tab.id
+                    ? 'border-[var(--lagoon-deep)] text-[var(--lagoon-deep)]'
+                    : 'border-transparent text-[var(--sea-ink-soft)] hover:border-[var(--line)] hover:text-[var(--sea-ink)]'
+                }`}
+              >
+                {tab.label}
+                <span className={`rounded-full px-2 py-0.5 text-xs ${
+                  activeTab === tab.id
+                    ? 'bg-[var(--lagoon)] text-[var(--lagoon-deep)]'
+                    : 'bg-[var(--sand)] text-[var(--sea-ink-soft)]'
+                }`}>
+                  {tab.count}
+                </span>
+              </button>
+            ))}
+          </nav>
+        </div>
+
+        {/* Active Tab Content */}
+        {activeTab === 'releases' && (
+          <HorizontalSection
+            title="Releases"
+            icon="releases"
+            items={dummyReleases}
+          />
+        )}
+        {activeTab === 'pullRequests' && (
+          <HorizontalSection
+            title="Pull Requests"
+            icon="pullRequests"
+            items={dummyPullRequests}
+          />
+        )}
+        {activeTab === 'discussions' && (
+          <HorizontalSection
+            title="Discussions"
+            icon="discussions"
+            items={dummyDiscussions}
+          />
+        )}
       </div>
     </DashboardLayout>
   )
