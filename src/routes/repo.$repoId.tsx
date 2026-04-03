@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useState } from 'react'
-import { Github, Loader2, CircleDot } from 'lucide-react'
+import { Github, Loader2, CircleDot, Tag, GitPullRequest, MessageSquare } from 'lucide-react'
 import { ReleaseList } from '../components/ReleaseList'
 import { PullRequestList } from '../components/PullRequestList'
 import { DiscussionList } from '../components/DiscussionList'
@@ -82,9 +82,9 @@ function RepositoryPage() {
   }
 
   const tabs = [
-    { id: 'releases' as TabType, label: 'Releases' },
-    { id: 'pullRequests' as TabType, label: 'Pull Requests' },
-    { id: 'discussions' as TabType, label: 'Discussions' },
+    { id: 'releases' as TabType, label: 'Releases', icon: Tag },
+    { id: 'pullRequests' as TabType, label: 'Pull Requests', icon: GitPullRequest },
+    { id: 'discussions' as TabType, label: 'Discussions', icon: MessageSquare },
   ]
 
   const getError = () => {
@@ -111,19 +111,23 @@ function RepositoryPage() {
         {/* Tab Navigation */}
         <div className="mb-6 border-b border-[var(--line)]">
           <nav className="-mb-px flex gap-1">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`inline-flex items-center border-b-2 px-4 py-2 text-sm font-medium transition-colors ${
-                  activeTab === tab.id
-                    ? 'border-[var(--lagoon-deep)] text-[var(--lagoon-deep)]'
-                    : 'border-transparent text-[var(--sea-ink-soft)] hover:border-[var(--line)] hover:text-[var(--sea-ink)]'
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
+            {tabs.map((tab) => {
+              const TabIcon = tab.icon
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`inline-flex items-center gap-2 border-b-2 px-4 py-2 text-sm font-medium transition-colors ${
+                    activeTab === tab.id
+                      ? 'border-[var(--lagoon-deep)] text-[var(--lagoon-deep)]'
+                      : 'border-transparent text-[var(--sea-ink-soft)] hover:border-[var(--line)] hover:text-[var(--sea-ink)]'
+                  }`}
+                >
+                  <TabIcon className="h-4 w-4" />
+                  {tab.label}
+                </button>
+              )
+            })}
           </nav>
         </div>
 

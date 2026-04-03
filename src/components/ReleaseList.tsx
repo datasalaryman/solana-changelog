@@ -1,5 +1,5 @@
 import { useEffect, useRef, useCallback } from 'react'
-import { Tag, ChevronRight, Loader2 } from 'lucide-react'
+import { ChevronRight, Loader2 } from 'lucide-react'
 import type { ReleaseItem } from '../types/github'
 
 interface ReleaseListProps {
@@ -48,12 +48,7 @@ export function ReleaseList({
   }, [handleObserver])
 
   return (
-    <section className="border-b border-[var(--line)] py-6 last:border-b-0">
-      <div className="mb-4 flex items-center gap-2">
-        <Tag className="h-5 w-5 text-[var(--lagoon-deep)]" />
-        <h2 className="font-semibold text-[var(--sea-ink)]">Releases</h2>
-      </div>
-
+    <section>
       <div className="space-y-2">
         {items.map((item) => (
           <a

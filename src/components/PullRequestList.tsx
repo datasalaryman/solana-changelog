@@ -1,5 +1,5 @@
 import { useEffect, useRef, useCallback } from 'react'
-import { GitPullRequest, ChevronRight, Loader2 } from 'lucide-react'
+import { ChevronRight, Loader2 } from 'lucide-react'
 import type { PullRequestItem } from '../types/github'
 
 interface PullRequestListProps {
@@ -61,12 +61,7 @@ export function PullRequestList({
   }, [handleObserver])
 
   return (
-    <section className="border-b border-[var(--line)] py-6 last:border-b-0">
-      <div className="mb-4 flex items-center gap-2">
-        <GitPullRequest className="h-5 w-5 text-[var(--lagoon-deep)]" />
-        <h2 className="font-semibold text-[var(--sea-ink)]">Pull Requests</h2>
-      </div>
-
+    <section>
       <div className="space-y-2">
         {items.map((item) => (
           <a
