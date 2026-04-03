@@ -8,7 +8,8 @@ import type {
 } from '../types/github'
 
 const BASE_URL = process.env.GITHUB_BASE_URL || 'https://api.github.com'
-const PER_PAGE = 100 // Maximum allowed by GitHub API
+const GITHUB_PER_PAGE = 100 // Fetch 100 from GitHub to minimize API calls
+const UI_PAGE_SIZE = 30 // Show 30 items at a time in UI
 
 function buildGitHubHeaders(): Record<string, string> {
   const token = process.env.GITHUB_TOKEN
@@ -42,34 +43,38 @@ function formatRelativeDate(dateString: string): string {
   return date.toLocaleDateString()
 }
 
-export interface InfiniteScrollResult<T> {
+export interface PaginatedBatchResult<T> {
   items: T[]
-  nextPage: number | string | null
+  batchPage: number // Which GitHub API page this is
+  uiPage: number // Which UI page (30 items) within the batch
+  totalFetched: number // Total items fetched so far across all batches
   hasMore: boolean
 }
 
 export async function fetchReleases(
   owner: string,
   repository: string,
-  page: number = 1
-): Promise<InfiniteScrollResult<ReleaseItem>> {
+  batchPage: number = 1,
+  uiPage: number = 1
+): Promise<PaginatedBatchResult<ReleaseItem>> {
   const headers = buildGitHubHeaders()
   
+  // Fetch 100 items from GitHub
   const response = await fetch(
-    `${BASE_URL}/repos/${owner}/${repository}/releases?per_page=${PER_PAGE}&page=${page}`,
+    `${BASE_URL}/repos/${owner}/${repository}/releases?per_page=${GITHUB_PER_PAGE}&page=${batchPage}`,
     { headers }
   )
 
   if (!response.ok) {
     if (response.status === 404) {
-      return { items: [], nextPage: null, hasMore: false }
+      return { items: [], batchPage: 1, uiPage: 1, totalFetched: 0, hasMore: false }
     }
     throw new Error(`GitHub API error ${response.status}`)
   }
 
   const pageItems: GitHubRelease[] = await response.json()
   
-  const items = pageItems.map((release) => ({
+  const allItems = pageItems.map((release) => ({
     id: release.id.toString(),
     title: release.tag_name,
     subtitle: release.name || release.body?.slice(0, 100) || 'No description',
@@ -77,24 +82,35 @@ export async function fetchReleases(
     url: release.html_url,
   }))
 
-  const hasMore = pageItems.length === PER_PAGE
-  
+  // Slice to get only the 30 items for the current UI page
+  const startIndex = (uiPage - 1) * UI_PAGE_SIZE
+  const endIndex = startIndex + UI_PAGE_SIZE
+  const items = allItems.slice(startIndex, endIndex)
+
+  // Determine if there's more data
+  const hasMoreInBatch = endIndex < allItems.length
+  const hasMoreBatches = pageItems.length === GITHUB_PER_PAGE
+  const hasMore = hasMoreInBatch || hasMoreBatches
+
   return { 
     items, 
-    nextPage: hasMore ? page + 1 : null,
-    hasMore 
+    batchPage,
+    uiPage,
+    totalFetched: ((batchPage - 1) * GITHUB_PER_PAGE) + allItems.length,
+    hasMore
   }
 }
 
 export async function fetchPullRequests(
   owner: string,
   repository: string,
-  page: number = 1
-): Promise<InfiniteScrollResult<PullRequestItem>> {
+  batchPage: number = 1,
+  uiPage: number = 1
+): Promise<PaginatedBatchResult<PullRequestItem>> {
   const headers = buildGitHubHeaders()
   
   const response = await fetch(
-    `${BASE_URL}/repos/${owner}/${repository}/pulls?state=all&sort=updated&direction=desc&per_page=${PER_PAGE}&page=${page}`,
+    `${BASE_URL}/repos/${owner}/${repository}/pulls?state=all&sort=updated&direction=desc&per_page=${GITHUB_PER_PAGE}&page=${batchPage}`,
     { headers }
   )
 
@@ -104,7 +120,7 @@ export async function fetchPullRequests(
 
   const pageItems: GitHubPullRequest[] = await response.json()
 
-  const items = pageItems.map((pr) => {
+  const allItems = pageItems.map((pr) => {
     let status: 'Open' | 'Merged' | 'Closed'
     if (pr.merged_at) {
       status = 'Merged'
@@ -124,12 +140,22 @@ export async function fetchPullRequests(
     }
   })
 
-  const hasMore = pageItems.length === PER_PAGE
-  
+  // Slice to get only the 30 items for the current UI page
+  const startIndex = (uiPage - 1) * UI_PAGE_SIZE
+  const endIndex = startIndex + UI_PAGE_SIZE
+  const items = allItems.slice(startIndex, endIndex)
+
+  // Determine if there's more data
+  const hasMoreInBatch = endIndex < allItems.length
+  const hasMoreBatches = pageItems.length === GITHUB_PER_PAGE
+  const hasMore = hasMoreInBatch || hasMoreBatches
+
   return { 
     items, 
-    nextPage: hasMore ? page + 1 : null,
-    hasMore 
+    batchPage,
+    uiPage,
+    totalFetched: ((batchPage - 1) * GITHUB_PER_PAGE) + allItems.length,
+    hasMore
   }
 }
 
@@ -164,8 +190,9 @@ const DISCUSSIONS_QUERY = `
 export async function fetchDiscussions(
   owner: string,
   repository: string,
-  cursor: string | null = null
-): Promise<InfiniteScrollResult<DiscussionItem>> {
+  cursor: string | null = null,
+  uiPage: number = 1
+): Promise<PaginatedBatchResult<DiscussionItem>> {
   const headers = buildGitHubHeaders()
   
   if (!headers.Authorization) {
@@ -218,7 +245,7 @@ export async function fetchDiscussions(
   const pageItems: GitHubDiscussion[] = result.data?.repository?.discussions?.nodes ?? []
   const pageInfo = result.data?.repository?.discussions?.pageInfo
 
-  const items: DiscussionItem[] = pageItems.map((discussion) => ({
+  const allItems: DiscussionItem[] = pageItems.map((discussion) => ({
     id: discussion.id,
     title: discussion.title,
     subtitle: `Started by @${discussion.author?.login ?? 'unknown'}`,
@@ -227,9 +254,21 @@ export async function fetchDiscussions(
     url: discussion.url,
   }))
 
+  // Slice to get only the 30 items for the current UI page
+  const startIndex = (uiPage - 1) * UI_PAGE_SIZE
+  const endIndex = startIndex + UI_PAGE_SIZE
+  const items = allItems.slice(startIndex, endIndex)
+
+  // Determine if there's more data
+  const hasMoreInBatch = endIndex < allItems.length
+  const hasMoreBatches = pageInfo?.hasNextPage ?? false
+  const hasMore = hasMoreInBatch || hasMoreBatches
+
   return { 
     items, 
-    nextPage: pageInfo?.hasNextPage ? pageInfo.endCursor : null,
-    hasMore: pageInfo?.hasNextPage ?? false
+    batchPage: 1, // Not used for cursor-based pagination
+    uiPage,
+    totalFetched: allItems.length,
+    hasMore
   }
 }

@@ -13,12 +13,13 @@ export const Route = createFileRoute('/api/github/$repoId/pull-requests')({
           return json({ error: 'Invalid repository format. Expected: owner/repo' }, { status: 400 })
         }
         
-        // Get page from query params
+        // Get pagination params
         const url = new URL(request.url)
-        const page = parseInt(url.searchParams.get('page') || '1', 10)
+        const batchPage = parseInt(url.searchParams.get('batchPage') || '1', 10)
+        const uiPage = parseInt(url.searchParams.get('uiPage') || '1', 10)
         
         try {
-          const result = await fetchPullRequests(owner, repo, page)
+          const result = await fetchPullRequests(owner, repo, batchPage, uiPage)
           return json(result)
         } catch (error) {
           const message = error instanceof Error ? error.message : 'Failed to fetch pull requests'
