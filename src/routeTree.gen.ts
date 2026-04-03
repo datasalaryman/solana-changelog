@@ -11,6 +11,9 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as RepoRepoIdRouteImport } from './routes/repo.$repoId'
+import { Route as ApiGithubRepoIdReleasesRouteImport } from './routes/api.github.$repoId.releases'
+import { Route as ApiGithubRepoIdPullRequestsRouteImport } from './routes/api.github.$repoId.pull-requests'
+import { Route as ApiGithubRepoIdDiscussionsRouteImport } from './routes/api.github.$repoId.discussions'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -22,31 +25,76 @@ const RepoRepoIdRoute = RepoRepoIdRouteImport.update({
   path: '/repo/$repoId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiGithubRepoIdReleasesRoute = ApiGithubRepoIdReleasesRouteImport.update({
+  id: '/api/github/$repoId/releases',
+  path: '/api/github/$repoId/releases',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiGithubRepoIdPullRequestsRoute =
+  ApiGithubRepoIdPullRequestsRouteImport.update({
+    id: '/api/github/$repoId/pull-requests',
+    path: '/api/github/$repoId/pull-requests',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiGithubRepoIdDiscussionsRoute =
+  ApiGithubRepoIdDiscussionsRouteImport.update({
+    id: '/api/github/$repoId/discussions',
+    path: '/api/github/$repoId/discussions',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/repo/$repoId': typeof RepoRepoIdRoute
+  '/api/github/$repoId/discussions': typeof ApiGithubRepoIdDiscussionsRoute
+  '/api/github/$repoId/pull-requests': typeof ApiGithubRepoIdPullRequestsRoute
+  '/api/github/$repoId/releases': typeof ApiGithubRepoIdReleasesRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/repo/$repoId': typeof RepoRepoIdRoute
+  '/api/github/$repoId/discussions': typeof ApiGithubRepoIdDiscussionsRoute
+  '/api/github/$repoId/pull-requests': typeof ApiGithubRepoIdPullRequestsRoute
+  '/api/github/$repoId/releases': typeof ApiGithubRepoIdReleasesRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/repo/$repoId': typeof RepoRepoIdRoute
+  '/api/github/$repoId/discussions': typeof ApiGithubRepoIdDiscussionsRoute
+  '/api/github/$repoId/pull-requests': typeof ApiGithubRepoIdPullRequestsRoute
+  '/api/github/$repoId/releases': typeof ApiGithubRepoIdReleasesRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/repo/$repoId'
+  fullPaths:
+    | '/'
+    | '/repo/$repoId'
+    | '/api/github/$repoId/discussions'
+    | '/api/github/$repoId/pull-requests'
+    | '/api/github/$repoId/releases'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/repo/$repoId'
-  id: '__root__' | '/' | '/repo/$repoId'
+  to:
+    | '/'
+    | '/repo/$repoId'
+    | '/api/github/$repoId/discussions'
+    | '/api/github/$repoId/pull-requests'
+    | '/api/github/$repoId/releases'
+  id:
+    | '__root__'
+    | '/'
+    | '/repo/$repoId'
+    | '/api/github/$repoId/discussions'
+    | '/api/github/$repoId/pull-requests'
+    | '/api/github/$repoId/releases'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   RepoRepoIdRoute: typeof RepoRepoIdRoute
+  ApiGithubRepoIdDiscussionsRoute: typeof ApiGithubRepoIdDiscussionsRoute
+  ApiGithubRepoIdPullRequestsRoute: typeof ApiGithubRepoIdPullRequestsRoute
+  ApiGithubRepoIdReleasesRoute: typeof ApiGithubRepoIdReleasesRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -65,12 +113,36 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RepoRepoIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/github/$repoId/releases': {
+      id: '/api/github/$repoId/releases'
+      path: '/api/github/$repoId/releases'
+      fullPath: '/api/github/$repoId/releases'
+      preLoaderRoute: typeof ApiGithubRepoIdReleasesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/github/$repoId/pull-requests': {
+      id: '/api/github/$repoId/pull-requests'
+      path: '/api/github/$repoId/pull-requests'
+      fullPath: '/api/github/$repoId/pull-requests'
+      preLoaderRoute: typeof ApiGithubRepoIdPullRequestsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/github/$repoId/discussions': {
+      id: '/api/github/$repoId/discussions'
+      path: '/api/github/$repoId/discussions'
+      fullPath: '/api/github/$repoId/discussions'
+      preLoaderRoute: typeof ApiGithubRepoIdDiscussionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   RepoRepoIdRoute: RepoRepoIdRoute,
+  ApiGithubRepoIdDiscussionsRoute: ApiGithubRepoIdDiscussionsRoute,
+  ApiGithubRepoIdPullRequestsRoute: ApiGithubRepoIdPullRequestsRoute,
+  ApiGithubRepoIdReleasesRoute: ApiGithubRepoIdReleasesRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

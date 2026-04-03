@@ -4,39 +4,47 @@ import { Github, Loader2, CircleDot } from 'lucide-react'
 import { HorizontalSection } from '../components/HorizontalSection'
 import { DashboardLayout } from '../components/DashboardLayout'
 import { useRepository } from '../hooks/useRepositories'
+import { useReleases, usePullRequests, useDiscussions } from '../hooks/useGitHubData'
+import { parseRepoId } from '../types/repository'
 
 export const Route = createFileRoute('/repo/$repoId')({
   component: RepositoryPage,
 })
 
-// Dummy data for the three sections
-const dummyReleases = [
-  { id: '1', title: 'v2.1.0', subtitle: 'Major performance improvements', date: '2 days ago' },
-  { id: '2', title: 'v2.0.5', subtitle: 'Bug fixes and security patches', date: '1 week ago' },
-  { id: '3', title: 'v2.0.0', subtitle: 'New API features', date: '2 weeks ago' },
-]
-
-const dummyPullRequests = [
-  { id: '1', title: 'feat: Add SIMD-0128 support', subtitle: '#1284 by @dev1', status: 'Open', date: '3 hours ago' },
-  { id: '2', title: 'fix: Resolve transaction parsing issue', subtitle: '#1283 by @dev2', status: 'Merged', date: '1 day ago' },
-  { id: '3', title: 'docs: Update README with examples', subtitle: '#1282 by @dev3', status: 'Open', date: '2 days ago' },
-  { id: '4', title: 'refactor: Optimize validator performance', subtitle: '#1281 by @dev4', status: 'Closed', date: '3 days ago' },
-]
-
-const dummyDiscussions = [
-  { id: '1', title: 'Proposal: New consensus mechanism', subtitle: 'Started by @researcher1', status: 'Active', date: '5 hours ago' },
-  { id: '2', title: 'Q&A: How to run a validator node?', subtitle: 'Started by @newbie', status: 'Answered', date: '1 day ago' },
-  { id: '3', title: 'RFC: Deprecate legacy RPC methods', subtitle: 'Started by @maintainer', status: 'Active', date: '3 days ago' },
-]
-
 type TabType = 'releases' | 'pullRequests' | 'discussions'
 
 function RepositoryPage() {
   const { repoId } = Route.useParams()
-  const { data: repository, isLoading } = useRepository(repoId)
+  const { data: repository, isLoading: isLoadingRepo } = useRepository(repoId)
   const [activeTab, setActiveTab] = useState<TabType>('releases')
 
-  if (isLoading) {
+  const { owner, repository: repoName } = repository 
+    ? { owner: repository.owner, repository: repository.repository }
+    : parseRepoId(repoId)
+
+  const { 
+    data: releases = [], 
+    isLoading: isLoadingReleases,
+    error: releasesError 
+  } = useReleases(owner, repoName)
+
+  const { 
+    data: pullRequests = [], 
+    isLoading: isLoadingPRs,
+    error: prsError 
+  } = usePullRequests(owner, repoName)
+
+  const { 
+    data: discussions = [], 
+    isLoading: isLoadingDiscussions,
+    error: discussionsError 
+  } = useDiscussions(owner, repoName)
+
+  const isLoading = isLoadingRepo || (activeTab === 'releases' && isLoadingReleases) || 
+                    (activeTab === 'pullRequests' && isLoadingPRs) || 
+                    (activeTab === 'discussions' && isLoadingDiscussions)
+
+  if (isLoadingRepo) {
     return (
       <DashboardLayout>
         <div className="flex h-full items-center justify-center">
@@ -63,10 +71,20 @@ function RepositoryPage() {
   }
 
   const tabs = [
-    { id: 'releases' as TabType, label: 'Releases', count: dummyReleases.length },
-    { id: 'pullRequests' as TabType, label: 'Pull Requests', count: dummyPullRequests.length },
-    { id: 'discussions' as TabType, label: 'Discussions', count: dummyDiscussions.length },
+    { id: 'releases' as TabType, label: 'Releases', count: releases.length },
+    { id: 'pullRequests' as TabType, label: 'Pull Requests', count: pullRequests.length },
+    { id: 'discussions' as TabType, label: 'Discussions', count: discussions.length },
   ]
+
+  const getError = () => {
+    if (activeTab === 'releases' && releasesError) return releasesError
+    if (activeTab === 'pullRequests' && prsError) return prsError
+    if (activeTab === 'discussions' && discussionsError) return discussionsError
+    return null
+  }
+
+  const error = getError()
+  const errorMessage = error instanceof Error ? error.message : error ? 'Failed to load' : null
 
   return (
     <DashboardLayout>
@@ -105,26 +123,45 @@ function RepositoryPage() {
           </nav>
         </div>
 
+        {/* Error Message */}
+        {errorMessage && (
+          <div className="mb-4 rounded-md bg-red-50 p-4 text-sm text-red-600">
+            <p>{errorMessage}</p>
+            {activeTab === 'discussions' && (
+              <p className="mt-1 text-xs opacity-75">
+                Note: Discussions require a GitHub token. Some repositories may not have discussions enabled.
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* Loading State */}
+        {isLoading && (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-[var(--lagoon-deep)]" />
+          </div>
+        )}
+
         {/* Active Tab Content */}
-        {activeTab === 'releases' && (
+        {!isLoading && !errorMessage && activeTab === 'releases' && (
           <HorizontalSection
             title="Releases"
             icon="releases"
-            items={dummyReleases}
+            items={releases}
           />
         )}
-        {activeTab === 'pullRequests' && (
+        {!isLoading && !errorMessage && activeTab === 'pullRequests' && (
           <HorizontalSection
             title="Pull Requests"
             icon="pullRequests"
-            items={dummyPullRequests}
+            items={pullRequests}
           />
         )}
-        {activeTab === 'discussions' && (
+        {!isLoading && !errorMessage && activeTab === 'discussions' && (
           <HorizontalSection
             title="Discussions"
             icon="discussions"
-            items={dummyDiscussions}
+            items={discussions}
           />
         )}
       </div>
