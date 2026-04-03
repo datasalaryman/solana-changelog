@@ -5,7 +5,7 @@ import { fetchDiscussions } from '../server/github'
 export const Route = createFileRoute('/api/github/$repoId/discussions')({
   server: {
     handlers: {
-      GET: async ({ params }) => {
+      GET: async ({ request, params }) => {
         const { repoId } = params
         const [owner, repo] = repoId.split('/')
         
@@ -13,9 +13,13 @@ export const Route = createFileRoute('/api/github/$repoId/discussions')({
           return json({ error: 'Invalid repository format. Expected: owner/repo' }, { status: 400 })
         }
         
+        // Get cursor from query params
+        const url = new URL(request.url)
+        const cursor = url.searchParams.get('cursor')
+        
         try {
-          const discussions = await fetchDiscussions(owner, repo)
-          return json(discussions)
+          const result = await fetchDiscussions(owner, repo, cursor)
+          return json(result)
         } catch (error) {
           const message = error instanceof Error ? error.message : 'Failed to fetch discussions'
           return json({ error: message }, { status: 500 })

@@ -8,8 +8,7 @@ import type {
 } from '../types/github'
 
 const BASE_URL = process.env.GITHUB_BASE_URL || 'https://api.github.com'
-const TARGET_COUNT = 10
-const PER_PAGE = 100
+const PER_PAGE = 100 // Maximum allowed by GitHub API
 
 function buildGitHubHeaders(): Record<string, string> {
   const token = process.env.GITHUB_TOKEN
@@ -43,81 +42,69 @@ function formatRelativeDate(dateString: string): string {
   return date.toLocaleDateString()
 }
 
+export interface InfiniteScrollResult<T> {
+  items: T[]
+  nextPage: number | string | null
+  hasMore: boolean
+}
+
 export async function fetchReleases(
   owner: string,
-  repository: string
-): Promise<ReleaseItem[]> {
+  repository: string,
+  page: number = 1
+): Promise<InfiniteScrollResult<ReleaseItem>> {
   const headers = buildGitHubHeaders()
-  const releases: GitHubRelease[] = []
-  let page = 1
+  
+  const response = await fetch(
+    `${BASE_URL}/repos/${owner}/${repository}/releases?per_page=${PER_PAGE}&page=${page}`,
+    { headers }
+  )
 
-  while (releases.length < TARGET_COUNT) {
-    const response = await fetch(
-      `${BASE_URL}/repos/${owner}/${repository}/releases?per_page=${PER_PAGE}&page=${page}`,
-      { headers }
-    )
-
-    if (!response.ok) {
-      if (response.status === 404) {
-        return []
-      }
-      throw new Error(`GitHub API error ${response.status}`)
+  if (!response.ok) {
+    if (response.status === 404) {
+      return { items: [], nextPage: null, hasMore: false }
     }
-
-    const pageItems: GitHubRelease[] = await response.json()
-    if (pageItems.length === 0) {
-      break
-    }
-
-    releases.push(...pageItems)
-    page += 1
-
-    if (pageItems.length < PER_PAGE) {
-      break
-    }
+    throw new Error(`GitHub API error ${response.status}`)
   }
 
-  return releases.slice(0, TARGET_COUNT).map((release) => ({
+  const pageItems: GitHubRelease[] = await response.json()
+  
+  const items = pageItems.map((release) => ({
     id: release.id.toString(),
     title: release.tag_name,
     subtitle: release.name || release.body?.slice(0, 100) || 'No description',
     date: formatRelativeDate(release.published_at || release.created_at),
     url: release.html_url,
   }))
+
+  const hasMore = pageItems.length === PER_PAGE
+  
+  return { 
+    items, 
+    nextPage: hasMore ? page + 1 : null,
+    hasMore 
+  }
 }
 
 export async function fetchPullRequests(
   owner: string,
-  repository: string
-): Promise<PullRequestItem[]> {
+  repository: string,
+  page: number = 1
+): Promise<InfiniteScrollResult<PullRequestItem>> {
   const headers = buildGitHubHeaders()
-  const prs: GitHubPullRequest[] = []
-  let page = 1
+  
+  const response = await fetch(
+    `${BASE_URL}/repos/${owner}/${repository}/pulls?state=all&sort=updated&direction=desc&per_page=${PER_PAGE}&page=${page}`,
+    { headers }
+  )
 
-  while (prs.length < TARGET_COUNT) {
-    const response = await fetch(
-      `${BASE_URL}/repos/${owner}/${repository}/pulls?state=all&sort=updated&direction=desc&per_page=${PER_PAGE}&page=${page}`,
-      { headers }
-    )
-
-    if (!response.ok) {
-      throw new Error(`GitHub API error ${response.status}`)
-    }
-
-    const pageItems: GitHubPullRequest[] = await response.json()
-    if (pageItems.length === 0) {
-      break
-    }
-
-    prs.push(...pageItems)
-    page += 1
-
-    if (pageItems.length < PER_PAGE) {
-      break
-    }
+  if (!response.ok) {
+    throw new Error(`GitHub API error ${response.status}`)
   }
 
-  return prs.slice(0, TARGET_COUNT).map((pr) => {
+  const pageItems: GitHubPullRequest[] = await response.json()
+
+  const items = pageItems.map((pr) => {
     let status: 'Open' | 'Merged' | 'Closed'
     if (pr.merged_at) {
       status = 'Merged'
@@ -136,6 +123,14 @@ export async function fetchPullRequests(
       url: pr.html_url,
     }
   })
+
+  const hasMore = pageItems.length === PER_PAGE
+  
+  return { 
+    items, 
+    nextPage: hasMore ? page + 1 : null,
+    hasMore 
+  }
 }
 
 const DISCUSSIONS_QUERY = `
@@ -160,9 +155,6 @@ const DISCUSSIONS_QUERY = `
             name
           }
           answerChosenAt
-          comments {
-            totalCount
-          }
         }
       }
     }
@@ -171,77 +163,62 @@ const DISCUSSIONS_QUERY = `
 
 export async function fetchDiscussions(
   owner: string,
-  repository: string
-): Promise<DiscussionItem[]> {
+  repository: string,
+  cursor: string | null = null
+): Promise<InfiniteScrollResult<DiscussionItem>> {
   const headers = buildGitHubHeaders()
   
   if (!headers.Authorization) {
     throw new Error('GITHUB_TOKEN environment variable is required to fetch discussions')
   }
   
-  const discussions: GitHubDiscussion[] = []
-  let cursor: string | null = null
+  const response = await fetch(`${BASE_URL}/graphql`, {
+    method: 'POST',
+    headers: {
+      ...headers,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      query: DISCUSSIONS_QUERY,
+      variables: { owner, repo: repository, cursor },
+    }),
+  })
 
-  while (discussions.length < TARGET_COUNT) {
-    const response = await fetch(`${BASE_URL}/graphql`, {
-      method: 'POST',
-      headers: {
-        ...headers,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        query: DISCUSSIONS_QUERY,
-        variables: { owner, repo: repository, cursor },
-      }),
-    })
+  if (!response.ok) {
+    throw new Error(`GitHub API error ${response.status}`)
+  }
 
-    if (!response.ok) {
-      throw new Error(`GitHub API error ${response.status}`)
-    }
-
-    const result: {
-      errors?: Array<{ message: string }>
-      data?: {
-        repository?: {
-          discussions?: {
-            nodes?: GitHubDiscussion[]
-            pageInfo?: {
-              hasNextPage: boolean
-              endCursor: string
-            }
+  const result: {
+    errors?: Array<{ message: string }>
+    data?: {
+      repository?: {
+        discussions?: {
+          nodes?: GitHubDiscussion[]
+          pageInfo?: {
+            hasNextPage: boolean
+            endCursor: string
           }
         }
       }
-    } = await response.json()
-
-    if (result.errors) {
-      const errorMessages = result.errors.map((e) => e.message).join(', ')
-      if (errorMessages.includes('Discussions') || errorMessages.includes('discussions')) {
-        throw new Error('Discussions are not enabled for this repository')
-      }
-      throw new Error(`GraphQL error: ${errorMessages}`)
     }
+  } = await response.json()
 
-    if (!result.data?.repository) {
-      throw new Error('Repository not found')
+  if (result.errors) {
+    const errorMessages = result.errors.map((e) => e.message).join(', ')
+    if (errorMessages.includes('Discussions') || errorMessages.includes('discussions')) {
+      throw new Error('Discussions are not enabled for this repository')
     }
-
-    const pageItems: GitHubDiscussion[] = result.data?.repository?.discussions?.nodes ?? []
-    const pageInfo: { hasNextPage: boolean; endCursor: string } | undefined = result.data?.repository?.discussions?.pageInfo
-
-    if (pageItems.length === 0) {
-      break
-    }
-
-    discussions.push(...pageItems)
-
-    if (!pageInfo?.hasNextPage) {
-      break
-    }
-    cursor = pageInfo.endCursor
+    throw new Error(`GraphQL error: ${errorMessages}`)
   }
 
-  return discussions.slice(0, TARGET_COUNT).map((discussion) => ({
+  if (!result.data?.repository) {
+    throw new Error('Repository not found')
+  }
+
+  const pageItems: GitHubDiscussion[] = result.data?.repository?.discussions?.nodes ?? []
+  const pageInfo = result.data?.repository?.discussions?.pageInfo
+
+  const items: DiscussionItem[] = pageItems.map((discussion) => ({
     id: discussion.id,
     title: discussion.title,
     subtitle: `Started by @${discussion.author?.login ?? 'unknown'}`,
@@ -249,4 +226,10 @@ export async function fetchDiscussions(
     date: formatRelativeDate(discussion.updatedAt),
     url: discussion.url,
   }))
+
+  return { 
+    items, 
+    nextPage: pageInfo?.hasNextPage ? pageInfo.endCursor : null,
+    hasMore: pageInfo?.hasNextPage ?? false
+  }
 }

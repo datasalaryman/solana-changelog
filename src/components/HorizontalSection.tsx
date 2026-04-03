@@ -1,4 +1,4 @@
-import { Tag, GitPullRequest, MessageSquare, ChevronRight } from 'lucide-react'
+import { Tag, GitPullRequest, MessageSquare, ChevronRight, ChevronLeft } from 'lucide-react'
 
 interface HorizontalSectionProps {
   title: string
@@ -11,6 +11,10 @@ interface HorizontalSectionProps {
     date?: string
     url?: string
   }>
+  currentPage: number
+  totalPages: number
+  totalItems: number
+  onPageChange: (page: number) => void
 }
 
 const iconMap = {
@@ -19,8 +23,54 @@ const iconMap = {
   discussions: MessageSquare,
 }
 
-export function HorizontalSection({ title, icon, items }: HorizontalSectionProps) {
+export function HorizontalSection({ 
+  title, 
+  icon, 
+  items, 
+  currentPage, 
+  totalPages, 
+  totalItems,
+  onPageChange 
+}: HorizontalSectionProps) {
   const Icon = iconMap[icon]
+
+  // Calculate the range of page numbers to show
+  const getPageNumbers = () => {
+    const pages: (number | string)[] = []
+    const maxVisiblePages = 5
+    
+    if (totalPages <= maxVisiblePages) {
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i)
+      }
+    } else {
+      if (currentPage <= 3) {
+        for (let i = 1; i <= 4; i++) {
+          pages.push(i)
+        }
+        pages.push('...')
+        pages.push(totalPages)
+      } else if (currentPage >= totalPages - 2) {
+        pages.push(1)
+        pages.push('...')
+        for (let i = totalPages - 3; i <= totalPages; i++) {
+          pages.push(i)
+        }
+      } else {
+        pages.push(1)
+        pages.push('...')
+        for (let i = currentPage - 1; i <= currentPage + 1; i++) {
+          pages.push(i)
+        }
+        pages.push('...')
+        pages.push(totalPages)
+      }
+    }
+    return pages
+  }
+
+  const startItem = (currentPage - 1) * 10 + 1
+  const endItem = Math.min(currentPage * 10, totalItems)
 
   return (
     <section className="border-b border-[var(--line)] py-6 last:border-b-0">
@@ -91,12 +141,50 @@ export function HorizontalSection({ title, icon, items }: HorizontalSectionProps
         </div>
       )}
 
-      {/* Showing count */}
-      {items.length > 0 && (
+      {/* Pagination */}
+      {totalPages > 1 && (
         <div className="mt-4 flex items-center justify-between rounded-lg bg-[var(--sand)]/50 px-3 py-2.5">
           <span className="text-xs text-[var(--sea-ink-soft)]">
-            Showing {items.length} recent items
+            Showing {startItem}-{endItem} of {totalItems}
           </span>
+          
+          <div className="flex items-center gap-1">
+            <button
+              disabled={currentPage === 1}
+              onClick={() => onPageChange(currentPage - 1)}
+              className="flex h-7 w-7 items-center justify-center rounded-md border border-[var(--line)] bg-[var(--surface)] text-[var(--sea-ink-soft)] transition hover:bg-[var(--link-bg-hover)] hover:text-[var(--sea-ink)] disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <ChevronLeft className="h-3.5 w-3.5" />
+            </button>
+            
+            {getPageNumbers().map((page, index) => (
+              typeof page === 'number' ? (
+                <button
+                  key={index}
+                  onClick={() => onPageChange(page)}
+                  className={`flex h-7 min-w-[28px] items-center justify-center rounded-md px-1.5 text-xs font-medium transition ${
+                    page === currentPage
+                      ? 'bg-[var(--lagoon)]/10 text-[var(--lagoon-deep)] border border-[var(--lagoon)]/30'
+                      : 'border border-[var(--line)] bg-[var(--surface)] text-[var(--sea-ink-soft)] hover:bg-[var(--link-bg-hover)] hover:text-[var(--sea-ink)]'
+                  }`}
+                >
+                  {page}
+                </button>
+              ) : (
+                <span key={index} className="px-1 text-xs text-[var(--sea-ink-soft)]">
+                  {page}
+                </span>
+              )
+            ))}
+            
+            <button
+              disabled={currentPage === totalPages}
+              onClick={() => onPageChange(currentPage + 1)}
+              className="flex h-7 w-7 items-center justify-center rounded-md border border-[var(--line)] bg-[var(--surface)] text-[var(--sea-ink-soft)] transition hover:bg-[var(--link-bg-hover)] hover:text-[var(--sea-ink)] disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <ChevronRight className="h-3.5 w-3.5" />
+            </button>
+          </div>
         </div>
       )}
     </section>

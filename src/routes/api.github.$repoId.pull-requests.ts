@@ -5,7 +5,7 @@ import { fetchPullRequests } from '../server/github'
 export const Route = createFileRoute('/api/github/$repoId/pull-requests')({
   server: {
     handlers: {
-      GET: async ({ params }) => {
+      GET: async ({ request, params }) => {
         const { repoId } = params
         const [owner, repo] = repoId.split('/')
         
@@ -13,9 +13,13 @@ export const Route = createFileRoute('/api/github/$repoId/pull-requests')({
           return json({ error: 'Invalid repository format. Expected: owner/repo' }, { status: 400 })
         }
         
+        // Get page from query params
+        const url = new URL(request.url)
+        const page = parseInt(url.searchParams.get('page') || '1', 10)
+        
         try {
-          const pullRequests = await fetchPullRequests(owner, repo)
-          return json(pullRequests)
+          const result = await fetchPullRequests(owner, repo, page)
+          return json(result)
         } catch (error) {
           const message = error instanceof Error ? error.message : 'Failed to fetch pull requests'
           return json({ error: message }, { status: 500 })

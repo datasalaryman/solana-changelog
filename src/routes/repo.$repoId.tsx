@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useState } from 'react'
 import { Github, Loader2, CircleDot } from 'lucide-react'
-import { HorizontalSection } from '../components/HorizontalSection'
+import { InfiniteScrollList } from '../components/InfiniteScrollList'
 import { DashboardLayout } from '../components/DashboardLayout'
 import { useRepository } from '../hooks/useRepositories'
 import { useReleases, usePullRequests, useDiscussions } from '../hooks/useGitHubData'
@@ -23,19 +23,28 @@ function RepositoryPage() {
     : parseRepoId(repoId)
 
   const { 
-    data: releases = [], 
+    data: releases, 
+    fetchNextPage: fetchNextReleases,
+    hasNextPage: hasNextReleases,
+    isFetchingNextPage: isFetchingNextReleases,
     isLoading: isLoadingReleases,
     error: releasesError 
   } = useReleases(owner, repoName)
 
   const { 
-    data: pullRequests = [], 
+    data: pullRequests, 
+    fetchNextPage: fetchNextPullRequests,
+    hasNextPage: hasNextPullRequests,
+    isFetchingNextPage: isFetchingNextPullRequests,
     isLoading: isLoadingPRs,
     error: prsError 
   } = usePullRequests(owner, repoName)
 
   const { 
-    data: discussions = [], 
+    data: discussions, 
+    fetchNextPage: fetchNextDiscussions,
+    hasNextPage: hasNextDiscussions,
+    isFetchingNextPage: isFetchingNextDiscussions,
     isLoading: isLoadingDiscussions,
     error: discussionsError 
   } = useDiscussions(owner, repoName)
@@ -71,9 +80,9 @@ function RepositoryPage() {
   }
 
   const tabs = [
-    { id: 'releases' as TabType, label: 'Releases', count: releases.length },
-    { id: 'pullRequests' as TabType, label: 'Pull Requests', count: pullRequests.length },
-    { id: 'discussions' as TabType, label: 'Discussions', count: discussions.length },
+    { id: 'releases' as TabType, label: 'Releases' },
+    { id: 'pullRequests' as TabType, label: 'Pull Requests' },
+    { id: 'discussions' as TabType, label: 'Discussions' },
   ]
 
   const getError = () => {
@@ -104,20 +113,13 @@ function RepositoryPage() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`inline-flex items-center gap-2 border-b-2 px-4 py-2 text-sm font-medium transition-colors ${
+                className={`inline-flex items-center border-b-2 px-4 py-2 text-sm font-medium transition-colors ${
                   activeTab === tab.id
                     ? 'border-[var(--lagoon-deep)] text-[var(--lagoon-deep)]'
                     : 'border-transparent text-[var(--sea-ink-soft)] hover:border-[var(--line)] hover:text-[var(--sea-ink)]'
                 }`}
               >
                 {tab.label}
-                <span className={`rounded-full px-2 py-0.5 text-xs ${
-                  activeTab === tab.id
-                    ? 'bg-[var(--lagoon)] text-[var(--lagoon-deep)]'
-                    : 'bg-[var(--sand)] text-[var(--sea-ink-soft)]'
-                }`}>
-                  {tab.count}
-                </span>
               </button>
             ))}
           </nav>
@@ -144,24 +146,33 @@ function RepositoryPage() {
 
         {/* Active Tab Content */}
         {!isLoading && !errorMessage && activeTab === 'releases' && (
-          <HorizontalSection
+          <InfiniteScrollList
             title="Releases"
             icon="releases"
             items={releases}
+            hasNextPage={hasNextReleases}
+            isFetchingNextPage={isFetchingNextReleases}
+            onLoadMore={fetchNextReleases}
           />
         )}
         {!isLoading && !errorMessage && activeTab === 'pullRequests' && (
-          <HorizontalSection
+          <InfiniteScrollList
             title="Pull Requests"
             icon="pullRequests"
             items={pullRequests}
+            hasNextPage={hasNextPullRequests}
+            isFetchingNextPage={isFetchingNextPullRequests}
+            onLoadMore={fetchNextPullRequests}
           />
         )}
         {!isLoading && !errorMessage && activeTab === 'discussions' && (
-          <HorizontalSection
+          <InfiniteScrollList
             title="Discussions"
             icon="discussions"
             items={discussions}
+            hasNextPage={hasNextDiscussions}
+            isFetchingNextPage={isFetchingNextDiscussions}
+            onLoadMore={fetchNextDiscussions}
           />
         )}
       </div>
