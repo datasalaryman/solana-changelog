@@ -2,15 +2,34 @@ import { createFileRoute, Navigate } from '@tanstack/react-router'
 import { Loader2 } from 'lucide-react'
 import { DashboardLayout } from '../components/DashboardLayout'
 import { useRepositories } from '../hooks/useRepositories'
+import { useSession } from '../hooks/useSession'
 
 export const Route = createFileRoute('/')({
   component: HomePage,
 })
 
 function HomePage() {
-  const { data: repositories, isLoading } = useRepositories()
+  const { data: session, isLoading: isLoadingSession } = useSession()
+  const { data: repositories, isLoading: isLoadingRepos } = useRepositories()
 
-  if (isLoading) {
+  // Show loading while checking session
+  if (isLoadingSession) {
+    return (
+      <DashboardLayout>
+        <div className="flex h-full items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-[var(--lagoon-deep)]" />
+        </div>
+      </DashboardLayout>
+    )
+  }
+
+  // Redirect to login if not authenticated
+  if (!session) {
+    return <Navigate to="/login" />
+  }
+
+  // Show loading while fetching repositories
+  if (isLoadingRepos) {
     return (
       <DashboardLayout>
         <div className="flex h-full items-center justify-center">

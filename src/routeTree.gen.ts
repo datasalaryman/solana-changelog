@@ -9,12 +9,19 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as RepoRepoIdRouteImport } from './routes/repo.$repoId'
+import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiGithubRepoIdReleasesRouteImport } from './routes/api.github.$repoId.releases'
 import { Route as ApiGithubRepoIdPullRequestsRouteImport } from './routes/api.github.$repoId.pull-requests'
 import { Route as ApiGithubRepoIdDiscussionsRouteImport } from './routes/api.github.$repoId.discussions'
 
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -23,6 +30,11 @@ const IndexRoute = IndexRouteImport.update({
 const RepoRepoIdRoute = RepoRepoIdRouteImport.update({
   id: '/repo/$repoId',
   path: '/repo/$repoId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
+  id: '/api/auth/$',
+  path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiGithubRepoIdReleasesRoute = ApiGithubRepoIdReleasesRouteImport.update({
@@ -45,14 +57,18 @@ const ApiGithubRepoIdDiscussionsRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/login': typeof LoginRoute
   '/repo/$repoId': typeof RepoRepoIdRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/github/$repoId/discussions': typeof ApiGithubRepoIdDiscussionsRoute
   '/api/github/$repoId/pull-requests': typeof ApiGithubRepoIdPullRequestsRoute
   '/api/github/$repoId/releases': typeof ApiGithubRepoIdReleasesRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/login': typeof LoginRoute
   '/repo/$repoId': typeof RepoRepoIdRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/github/$repoId/discussions': typeof ApiGithubRepoIdDiscussionsRoute
   '/api/github/$repoId/pull-requests': typeof ApiGithubRepoIdPullRequestsRoute
   '/api/github/$repoId/releases': typeof ApiGithubRepoIdReleasesRoute
@@ -60,7 +76,9 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/login': typeof LoginRoute
   '/repo/$repoId': typeof RepoRepoIdRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/github/$repoId/discussions': typeof ApiGithubRepoIdDiscussionsRoute
   '/api/github/$repoId/pull-requests': typeof ApiGithubRepoIdPullRequestsRoute
   '/api/github/$repoId/releases': typeof ApiGithubRepoIdReleasesRoute
@@ -69,21 +87,27 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/login'
     | '/repo/$repoId'
+    | '/api/auth/$'
     | '/api/github/$repoId/discussions'
     | '/api/github/$repoId/pull-requests'
     | '/api/github/$repoId/releases'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/login'
     | '/repo/$repoId'
+    | '/api/auth/$'
     | '/api/github/$repoId/discussions'
     | '/api/github/$repoId/pull-requests'
     | '/api/github/$repoId/releases'
   id:
     | '__root__'
     | '/'
+    | '/login'
     | '/repo/$repoId'
+    | '/api/auth/$'
     | '/api/github/$repoId/discussions'
     | '/api/github/$repoId/pull-requests'
     | '/api/github/$repoId/releases'
@@ -91,7 +115,9 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  LoginRoute: typeof LoginRoute
   RepoRepoIdRoute: typeof RepoRepoIdRoute
+  ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiGithubRepoIdDiscussionsRoute: typeof ApiGithubRepoIdDiscussionsRoute
   ApiGithubRepoIdPullRequestsRoute: typeof ApiGithubRepoIdPullRequestsRoute
   ApiGithubRepoIdReleasesRoute: typeof ApiGithubRepoIdReleasesRoute
@@ -99,6 +125,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -111,6 +144,13 @@ declare module '@tanstack/react-router' {
       path: '/repo/$repoId'
       fullPath: '/repo/$repoId'
       preLoaderRoute: typeof RepoRepoIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/auth/$': {
+      id: '/api/auth/$'
+      path: '/api/auth/$'
+      fullPath: '/api/auth/$'
+      preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/github/$repoId/releases': {
@@ -139,7 +179,9 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  LoginRoute: LoginRoute,
   RepoRepoIdRoute: RepoRepoIdRoute,
+  ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiGithubRepoIdDiscussionsRoute: ApiGithubRepoIdDiscussionsRoute,
   ApiGithubRepoIdPullRequestsRoute: ApiGithubRepoIdPullRequestsRoute,
   ApiGithubRepoIdReleasesRoute: ApiGithubRepoIdReleasesRoute,

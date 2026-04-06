@@ -1,6 +1,6 @@
-import type { 
-  GitHubRelease, 
-  GitHubPullRequest, 
+import type {
+  GitHubRelease,
+  GitHubPullRequest,
   GitHubDiscussion,
   ReleaseItem,
   PullRequestItem,
@@ -11,8 +11,9 @@ const BASE_URL = process.env.GITHUB_BASE_URL || 'https://api.github.com'
 const GITHUB_PER_PAGE = 100 // Fetch 100 from GitHub to minimize API calls
 const UI_PAGE_SIZE = 30 // Show 30 items at a time in UI
 
-function buildGitHubHeaders(): Record<string, string> {
-  const token = process.env.GITHUB_TOKEN
+function buildGitHubHeaders(userToken?: string): Record<string, string> {
+  // Use user's access token if available, otherwise fall back to env token
+  const token = userToken || process.env.GITHUB_TOKEN
   const headers: Record<string, string> = {
     Accept: 'application/vnd.github+json',
     'X-GitHub-Api-Version': '2022-11-28',
@@ -55,9 +56,10 @@ export async function fetchReleases(
   owner: string,
   repository: string,
   batchPage: number = 1,
-  uiPage: number = 1
+  uiPage: number = 1,
+  userToken?: string
 ): Promise<PaginatedBatchResult<ReleaseItem>> {
-  const headers = buildGitHubHeaders()
+  const headers = buildGitHubHeaders(userToken)
   
   // Fetch 100 items from GitHub
   const response = await fetch(
@@ -105,9 +107,10 @@ export async function fetchPullRequests(
   owner: string,
   repository: string,
   batchPage: number = 1,
-  uiPage: number = 1
+  uiPage: number = 1,
+  userToken?: string
 ): Promise<PaginatedBatchResult<PullRequestItem>> {
-  const headers = buildGitHubHeaders()
+  const headers = buildGitHubHeaders(userToken)
   
   const response = await fetch(
     `${BASE_URL}/repos/${owner}/${repository}/pulls?state=all&sort=updated&direction=desc&per_page=${GITHUB_PER_PAGE}&page=${batchPage}`,
@@ -191,9 +194,10 @@ export async function fetchDiscussions(
   owner: string,
   repository: string,
   cursor: string | null = null,
-  uiPage: number = 1
+  uiPage: number = 1,
+  userToken?: string
 ): Promise<PaginatedBatchResult<DiscussionItem>> {
-  const headers = buildGitHubHeaders()
+  const headers = buildGitHubHeaders(userToken)
   
   if (!headers.Authorization) {
     throw new Error('GITHUB_TOKEN environment variable is required to fetch discussions')

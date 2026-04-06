@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, Navigate } from '@tanstack/react-router'
 import { useState } from 'react'
 import { GitBranch, Loader2, CircleDot, Tag, GitPullRequest, MessageSquare } from 'lucide-react'
 import { ReleaseList } from '../components/ReleaseList'
@@ -8,6 +8,7 @@ import { DashboardLayout } from '../components/DashboardLayout'
 import { useRepository } from '../hooks/useRepositories'
 import { useReleases, usePullRequests, useDiscussions } from '../hooks/useGitHubData'
 import { parseRepoId } from '../types/repository'
+import { useSession } from '../hooks/useSession'
 
 export const Route = createFileRoute('/repo/$repoId')({
   component: RepositoryPage,
@@ -17,13 +18,16 @@ type TabType = 'releases' | 'pullRequests' | 'discussions'
 
 function RepositoryPage() {
   const { repoId } = Route.useParams()
+  const { data: session, isLoading: isLoadingSession } = useSession()
   const { data: repository, isLoading: isLoadingRepo } = useRepository(repoId)
   const [activeTab, setActiveTab] = useState<TabType>('releases')
 
+  // Parse repo info for API calls (must be called before any early returns)
   const { owner, repository: repoName } = repository 
     ? { owner: repository.owner, repository: repository.repository }
     : parseRepoId(repoId)
 
+  // Always call these hooks, regardless of auth state
   const { 
     data: releases, 
     fetchNextPage: fetchNextReleases,
@@ -51,9 +55,20 @@ function RepositoryPage() {
     error: discussionsError 
   } = useDiscussions(owner, repoName)
 
-  const isLoading = isLoadingRepo || (activeTab === 'releases' && isLoadingReleases) || 
-                    (activeTab === 'pullRequests' && isLoadingPRs) || 
-                    (activeTab === 'discussions' && isLoadingDiscussions)
+  // Now handle conditional rendering after all hooks are called
+  if (isLoadingSession) {
+    return (
+      <DashboardLayout>
+        <div className="flex h-full items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-[var(--lagoon-deep)]" />
+        </div>
+      </DashboardLayout>
+    )
+  }
+
+  if (!session) {
+    return <Navigate to="/login" />
+  }
 
   if (isLoadingRepo) {
     return (
@@ -81,6 +96,10 @@ function RepositoryPage() {
     )
   }
 
+  const isLoading = (activeTab === 'releases' && isLoadingReleases) || 
+                    (activeTab === 'pullRequests' && isLoadingPRs) || 
+                    (activeTab === 'discussions' && isLoadingDiscussions)
+
   const tabs = [
     { id: 'releases' as TabType, label: 'Releases', icon: Tag },
     { id: 'pullRequests' as TabType, label: 'Pull Requests', icon: GitPullRequest },
@@ -100,7 +119,6 @@ function RepositoryPage() {
   return (
     <DashboardLayout>
       <div className="mx-auto max-w-4xl">
-        {/* Compact Header */}
         <div className="mb-6 flex items-center gap-3 border-b border-[var(--line)] pb-4">
           <GitBranch className="h-5 w-5 text-[var(--lagoon-deep)]" />
           <h1 className="text-lg font-semibold text-[var(--sea-ink)]">
@@ -108,7 +126,6 @@ function RepositoryPage() {
           </h1>
         </div>
 
-        {/* Tab Navigation */}
         <div className="mb-6 border-b border-[var(--line)]">
           <nav className="-mb-px flex gap-1">
             {tabs.map((tab) => {
@@ -131,7 +148,6 @@ function RepositoryPage() {
           </nav>
         </div>
 
-        {/* Error Message */}
         {errorMessage && (
           <div className="mb-4 rounded-md bg-red-50 p-4 text-sm text-red-600">
             <p>{errorMessage}</p>
@@ -143,14 +159,12 @@ function RepositoryPage() {
           </div>
         )}
 
-        {/* Loading State */}
         {isLoading && (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-[var(--lagoon-deep)]" />
           </div>
         )}
 
-        {/* Active Tab Content */}
         {!isLoading && !errorMessage && activeTab === 'releases' && (
           <ReleaseList
             items={releases}

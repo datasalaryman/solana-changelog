@@ -1,8 +1,23 @@
-import { Link } from '@tanstack/react-router'
-import { LayoutDashboard } from 'lucide-react'
+import { Link, useNavigate } from '@tanstack/react-router'
+import { LayoutDashboard, LogOut, User } from 'lucide-react'
 import ThemeToggle from './ThemeToggle'
+import { useSession, useSignOut } from '../hooks/useSession'
 
 export default function Header() {
+  const navigate = useNavigate()
+  const signOut = useSignOut()
+  const { data: session, isLoading: isPending } = useSession()
+
+  const handleSignOut = async () => {
+    try {
+      await signOut()
+      // Redirect to login page after logout
+      navigate({ to: '/login' })
+    } catch (error) {
+      console.error('Sign out error:', error)
+    }
+  }
+
   return (
     <header className="sticky top-0 z-50 border-b border-[var(--line)] bg-[var(--header-bg)] px-4 backdrop-blur-lg">
       <nav className="flex h-14 items-center gap-4">
@@ -33,6 +48,26 @@ export default function Header() {
           </a>
 
           <ThemeToggle />
+
+          {/* Show user info and logout when logged in */}
+          {!isPending && session && (
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 rounded-lg bg-[var(--fill)] px-3 py-1.5">
+                <User className="h-4 w-4 text-[var(--sea-ink-soft)]" />
+                <span className="text-sm text-[var(--sea-ink)] hidden sm:inline">
+                  {session.user.name || session.user.email}
+                </span>
+              </div>
+              <button
+                onClick={handleSignOut}
+                className="flex items-center gap-1.5 rounded-xl p-2 text-[var(--sea-ink-soft)] transition hover:bg-[var(--link-bg-hover)] hover:text-[var(--sea-ink)]"
+                title="Sign out"
+              >
+                <LogOut className="h-4 w-4" />
+                <span className="sr-only">Sign out</span>
+              </button>
+            </div>
+          )}
         </div>
       </nav>
     </header>
