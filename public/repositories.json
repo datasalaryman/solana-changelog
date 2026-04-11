@@ -26,11 +26,11 @@
   {
     "owner": "anza-xyz",
     "repository": "solana-sdk"
-  },
+  }, 
   {
     "owner": "solana-foundation", 
     "repository": "solana-go"
-  }, 
+  },
   {
     "owner": "solana-foundation",
     "repository": "anchor"
@@ -43,6 +43,10 @@
     "owner": "regolith-labs",
     "repository": "steel"
   },
+  {
+    "owner": "joeymeere", 
+    "repository": "caravel"
+  }, 
   {
     "owner": "LiteSVM",
     "repository": "litesvm"
