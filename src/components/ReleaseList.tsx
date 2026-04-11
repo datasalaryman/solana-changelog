@@ -126,7 +126,7 @@ export function ReleaseList({
 
     const observer = new IntersectionObserver(handleObserver, {
       root: null,
-      rootMargin: '100px',
+      rootMargin: '2000px',
       threshold: 0,
     })
 

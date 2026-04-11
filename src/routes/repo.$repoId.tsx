@@ -1,5 +1,5 @@
 import { createFileRoute, Navigate } from '@tanstack/react-router'
-import { useState } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { GitBranch, Loader2, CircleDot, Tag, GitPullRequest, MessageSquare } from 'lucide-react'
 import { ReleaseList } from '../components/ReleaseList'
 import { PullRequestList } from '../components/PullRequestList'
@@ -32,6 +32,36 @@ function RepositoryPage() {
   const { data: session, isLoading: isLoadingSession } = useSession()
   const { data: repository, isLoading: isLoadingRepo } = useRepository(repoId)
   const [activeTab, setActiveTab] = useState<TabType>('releases')
+  const scrollPositions = useRef<Map<string, number>>(new Map())
+  const prevKeyRef = useRef<string | null>(null)
+
+  const getScrollKey = useCallback(() => `${repoId}:${activeTab}`, [repoId, activeTab])
+
+  useEffect(() => {
+    const key = getScrollKey()
+    const prevKey = prevKeyRef.current
+
+    if (prevKey) {
+      const main = document.querySelector('main')
+      if (main) scrollPositions.current.set(prevKey, main.scrollTop)
+    }
+
+    const main = document.querySelector('main')
+    if (main) main.scrollTop = scrollPositions.current.get(key) ?? 0
+
+    prevKeyRef.current = key
+  }, [repoId, activeTab, getScrollKey])
+
+  useEffect(() => {
+    const main = document.querySelector('main')
+    if (!main) return
+    const onScroll = () => {
+      const key = getScrollKey()
+      scrollPositions.current.set(key, main.scrollTop)
+    }
+    main.addEventListener('scroll', onScroll, { passive: true })
+    return () => main.removeEventListener('scroll', onScroll)
+  }, [getScrollKey])
 
   const { owner, repository: repoName } = repository 
     ? { owner: repository.owner, repository: repository.repository }

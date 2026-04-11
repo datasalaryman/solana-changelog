@@ -138,7 +138,7 @@ export function DiscussionList({
 
     observerRef.current = new IntersectionObserver(handleObserver, {
       root: null,
-      rootMargin: '100px',
+      rootMargin: '2000px',
       threshold: 0,
     })
 
