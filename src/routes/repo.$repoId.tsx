@@ -44,7 +44,7 @@ function RepositoryPage() {
     isFetchingNextPage: isFetchingNextReleases,
     isLoading: isLoadingReleases,
     error: releasesError 
-  } = useReleases(owner, repoName)
+  } = useReleases(owner, repoName, { enabled: !!session })
 
   const { 
     data: pullRequests, 
@@ -53,7 +53,7 @@ function RepositoryPage() {
     isFetchingNextPage: isFetchingNextPullRequests,
     isLoading: isLoadingPRs,
     error: prsError 
-  } = usePullRequests(owner, repoName)
+  } = usePullRequests(owner, repoName, { enabled: !!session })
 
   if (isLoadingSession) {
     return (

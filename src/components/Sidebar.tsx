@@ -5,6 +5,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useRepositories } from '../hooks/useRepositories'
 import { createPrefetchFunctions } from '../hooks/useGitHubData'
 import { useSidebar } from '../context/SidebarContext'
+import { useSession } from '../hooks/useSession'
 import type { RepositoryWithId } from '../types/repository'
 
 function RepoLink({ repo, isActive }: { repo: RepositoryWithId; isActive: boolean }) {
@@ -39,7 +40,7 @@ function RepoLink({ repo, isActive }: { repo: RepositoryWithId; isActive: boolea
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       onClick={() => close()}
-      className={`block rounded-md px-2.5 py-2 text-[13px] leading-snug transition-all ${
+      className={`block rounded-md px-2.5 py-2 text-base md:text-[13px] md:leading-snug transition-all ${
         isActive
           ? 'bg-[var(--lagoon)]/10 text-[var(--lagoon-deep)] font-medium'
           : 'text-[var(--sea-ink-soft)] hover:bg-[var(--link-bg-hover)] hover:text-[var(--sea-ink)]'
@@ -56,7 +57,8 @@ function RepoLink({ repo, isActive }: { repo: RepositoryWithId; isActive: boolea
 }
 
 export function Sidebar() {
-  const { data: repositories, isLoading, error } = useRepositories()
+  const { data: session } = useSession()
+  const { data: repositories, isLoading, error } = useRepositories({ enabled: !!session })
   const params = useParams({ strict: false })
   const currentRepoId = params.repoId as string | undefined
   const prefetchedRef = useRef(false)
@@ -68,7 +70,7 @@ export function Sidebar() {
   const { isOpen, close } = useSidebar()
 
   useEffect(() => {
-    if (!repositories || prefetchedRef.current) return
+    if (!repositories || !session || prefetchedRef.current) return
     prefetchedRef.current = true
 
     const prefetchAllRepos = () => {
@@ -80,7 +82,7 @@ export function Sidebar() {
     if ('requestIdleCallback' in window) {
       ;(window as typeof window & { requestIdleCallback: (cb: () => void) => void }).requestIdleCallback(prefetchAllRepos)
     }
-  }, [repositories, prefetchRepoData])
+  }, [repositories, session, prefetchRepoData])
 
   useEffect(() => {
     if (isOpen) {

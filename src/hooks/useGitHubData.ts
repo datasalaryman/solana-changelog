@@ -76,7 +76,8 @@ async function queueFetch<T>(url: string, priority: 'high' | 'low' = 'low'): Pro
 
 export function useReleases(
   owner: string,
-  repository: string
+  repository: string,
+  options?: { enabled?: boolean }
 ): UseInfiniteDataResult<ReleaseItem> {
   const repoId = `${owner}/${repository}`
 
@@ -101,7 +102,7 @@ export function useReleases(
       return undefined
     },
     staleTime: 5 * 60 * 1000,
-    enabled: !!owner && !!repository,
+    enabled: !!owner && !!repository && options?.enabled !== false,
     initialPageParam: 1,
     retry: (failureCount, error) => {
       if (error instanceof ReauthRequiredError) {
@@ -130,7 +131,8 @@ export function useReleases(
 
 export function usePullRequests(
   owner: string,
-  repository: string
+  repository: string,
+  options?: { enabled?: boolean }
 ): UseInfiniteDataResult<PullRequestItem> {
   const repoId = `${owner}/${repository}`
 
@@ -155,7 +157,7 @@ export function usePullRequests(
       return undefined
     },
     staleTime: 5 * 60 * 1000,
-    enabled: !!owner && !!repository,
+    enabled: !!owner && !!repository && options?.enabled !== false,
     initialPageParam: 1,
     retry: (failureCount, error) => {
       if (error instanceof ReauthRequiredError) {
@@ -184,7 +186,8 @@ export function usePullRequests(
 
 export function useDiscussions(
   owner: string,
-  repository: string
+  repository: string,
+  options?: { enabled?: boolean }
 ): UseInfiniteDataResult<DiscussionItem> {
   const repoId = `${owner}/${repository}`
 
@@ -225,7 +228,7 @@ export function useDiscussions(
       }
     },
     staleTime: 5 * 60 * 1000,
-    enabled: !!owner && !!repository,
+    enabled: !!owner && !!repository && options?.enabled !== false,
     initialPageParam: { cursor: null, uiPage: 1 } as { cursor: string | null; uiPage: number },
     retry: (failureCount, error) => {
       if (error instanceof ReauthRequiredError) {

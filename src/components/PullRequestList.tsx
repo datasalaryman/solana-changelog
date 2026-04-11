@@ -171,6 +171,11 @@ export function PullRequestList({
                     {item.subtitle}
                   </p>
                 )}
+                {item.date && (
+                  <span className="mt-0.5 block text-xs text-[var(--sea-ink-soft)] sm:hidden">
+                    {item.date}
+                  </span>
+                )}
               </div>
             </div>
             <div className="ml-2 hidden items-center gap-1 sm:ml-4 sm:flex">
