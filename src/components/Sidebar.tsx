@@ -1,11 +1,82 @@
 import { Link, useParams } from '@tanstack/react-router'
 import { GitBranch, Loader2 } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { useRepositories } from '../hooks/useRepositories'
+import { createPrefetchFunctions } from '../hooks/useGitHubData'
+import type { RepositoryWithId } from '../types/repository'
+
+function RepoLink({ repo, isActive }: { repo: RepositoryWithId; isActive: boolean }) {
+  const queryClient = useQueryClient()
+  const { prefetchRepoData } = useMemo(
+    () => createPrefetchFunctions(queryClient),
+    [queryClient]
+  )
+  const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const handleMouseEnter = useCallback(() => {
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current)
+    }
+    hoverTimeoutRef.current = setTimeout(() => {
+      prefetchRepoData(repo.owner, repo.repository, 'high')
+    }, 200)
+  }, [repo.owner, repo.repository, prefetchRepoData])
+
+  const handleMouseLeave = useCallback(() => {
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current)
+      hoverTimeoutRef.current = null
+    }
+  }, [])
+
+  return (
+    <Link
+      to="/repo/$repoId"
+      params={{ repoId: repo.id }}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+      className={`block rounded-md px-2.5 py-2 text-[13px] leading-snug transition-all ${
+        isActive
+          ? 'bg-[var(--lagoon)]/10 text-[var(--lagoon-deep)] font-medium'
+          : 'text-[var(--sea-ink-soft)] hover:bg-[var(--link-bg-hover)] hover:text-[var(--sea-ink)]'
+      }`}
+    >
+      <span className="block truncate">
+        <span className="opacity-60">{repo.owner}/</span>
+        <span className={isActive ? 'text-[var(--lagoon-deep)]' : ''}>
+          {repo.repository}
+        </span>
+      </span>
+    </Link>
+  )
+}
 
 export function Sidebar() {
   const { data: repositories, isLoading, error } = useRepositories()
   const params = useParams({ strict: false })
   const currentRepoId = params.repoId as string | undefined
+  const prefetchedRef = useRef(false)
+  const queryClient = useQueryClient()
+  const { prefetchRepoData } = useMemo(
+    () => createPrefetchFunctions(queryClient),
+    [queryClient]
+  )
+
+  useEffect(() => {
+    if (!repositories || prefetchedRef.current) return
+    prefetchedRef.current = true
+
+    const prefetchAllRepos = () => {
+      for (const repo of repositories) {
+        prefetchRepoData(repo.owner, repo.repository, 'low')
+      }
+    }
+
+    if ('requestIdleCallback' in window) {
+      ;(window as typeof window & { requestIdleCallback: (cb: () => void) => void }).requestIdleCallback(prefetchAllRepos)
+    }
+  }, [repositories, prefetchRepoData])
 
   return (
     <aside className="flex h-full w-60 flex-shrink-0 flex-col border-r border-[var(--line)] bg-[var(--surface)] backdrop-blur-sm">
@@ -37,22 +108,7 @@ export function Sidebar() {
               const isActive = currentRepoId === repo.id
               return (
                 <li key={repo.id}>
-                  <Link
-                    to="/repo/$repoId"
-                    params={{ repoId: repo.id }}
-                    className={`block rounded-md px-2.5 py-2 text-[13px] leading-snug transition-all ${
-                      isActive
-                        ? 'bg-[var(--lagoon)]/10 text-[var(--lagoon-deep)] font-medium'
-                        : 'text-[var(--sea-ink-soft)] hover:bg-[var(--link-bg-hover)] hover:text-[var(--sea-ink)]'
-                    }`}
-                  >
-                    <span className="block truncate">
-                      <span className="opacity-60">{repo.owner}/</span>
-                      <span className={isActive ? 'text-[var(--lagoon-deep)]' : ''}>
-                        {repo.repository}
-                      </span>
-                    </span>
-                  </Link>
+                  <RepoLink repo={repo} isActive={isActive} />
                 </li>
               )
             })}

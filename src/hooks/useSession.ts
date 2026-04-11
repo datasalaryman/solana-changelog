@@ -1,5 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { authClient } from '../lib/auth-client'
+import { githubRequestQueue } from '../lib/requestQueue'
 
 export function useSession() {
   return useQuery({
@@ -16,9 +17,11 @@ export function useSession() {
 
 export function useSignOut() {
   const queryClient = useQueryClient()
-  
+
   return async () => {
     await authClient.signOut()
     queryClient.removeQueries({ queryKey: ['session'] })
+    // Clear all pending GitHub API requests
+    githubRequestQueue.clear()
   }
 }

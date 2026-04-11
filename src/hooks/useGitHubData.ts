@@ -1,6 +1,9 @@
-import { useInfiniteQuery } from '@tanstack/react-query'
+import { useInfiniteQuery, QueryClient } from '@tanstack/react-query'
+import { redirect } from '@tanstack/react-router'
 import type { ReleaseItem, PullRequestItem, DiscussionItem } from '../types/github'
 import type { PaginatedBatchResult } from '../server/github'
+import { githubRequestQueue } from '../lib/requestQueue'
+import { queryClient } from '../routes/__root'
 
 const GITHUB_KEY = 'github'
 const UI_PAGE_SIZE = 30
@@ -29,6 +32,19 @@ class ReauthRequiredError extends Error {
   }
 }
 
+// Global handler for reauth errors - clears credentials and redirects
+function handleReauthError(): never {
+  // Clear all queries from cache
+  queryClient.clear()
+  // Throw redirect to login page
+  throw redirect({
+    to: '/login',
+    search: {
+      reauth: true,
+    },
+  })
+}
+
 async function handleApiResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
     const err = await response.json()
@@ -38,6 +54,24 @@ async function handleApiResponse<T>(response: Response): Promise<T> {
     throw new Error(err.error || 'API request failed')
   }
   return response.json()
+}
+
+async function queueFetch<T>(url: string, priority: 'high' | 'low' = 'low'): Promise<T> {
+  try {
+    return await githubRequestQueue.add(
+      url,
+      async () => {
+        const response = await fetch(url, { credentials: 'include' })
+        return handleApiResponse<T>(response)
+      },
+      priority
+    )
+  } catch (error) {
+    if (error instanceof ReauthRequiredError) {
+      handleReauthError()
+    }
+    throw error
+  }
 }
 
 export function useReleases(
@@ -57,11 +91,8 @@ export function useReleases(
     queryKey: [GITHUB_KEY, 'releases', owner, repository],
     queryFn: async ({ pageParam = 1 }) => {
       const { batchPage, uiPage } = calculatePagination(pageParam as number)
-      const response = await fetch(
-        `/api/github/${encodeURIComponent(repoId)}/releases?batchPage=${batchPage}&uiPage=${uiPage}`,
-        { credentials: 'include' }
-      )
-      return handleApiResponse<PaginatedBatchResult<ReleaseItem>>(response)
+      const url = `/api/github/${encodeURIComponent(repoId)}/releases?batchPage=${batchPage}&uiPage=${uiPage}`
+      return queueFetch<PaginatedBatchResult<ReleaseItem>>(url, 'high')
     },
     getNextPageParam: (lastPage, allPages) => {
       if (lastPage.hasMore) {
@@ -74,11 +105,16 @@ export function useReleases(
     initialPageParam: 1,
     retry: (failureCount, error) => {
       if (error instanceof ReauthRequiredError) {
-        return false
+        handleReauthError()
       }
       return failureCount < 3
     },
   })
+
+  // Check for reauth error after query completes
+  if (error instanceof ReauthRequiredError) {
+    handleReauthError()
+  }
 
   const allItems = data?.pages.flatMap((page) => page.items) ?? []
 
@@ -109,11 +145,8 @@ export function usePullRequests(
     queryKey: [GITHUB_KEY, 'pullRequests', owner, repository],
     queryFn: async ({ pageParam = 1 }) => {
       const { batchPage, uiPage } = calculatePagination(pageParam as number)
-      const response = await fetch(
-        `/api/github/${encodeURIComponent(repoId)}/pull-requests?batchPage=${batchPage}&uiPage=${uiPage}`,
-        { credentials: 'include' }
-      )
-      return handleApiResponse<PaginatedBatchResult<PullRequestItem>>(response)
+      const url = `/api/github/${encodeURIComponent(repoId)}/pull-requests?batchPage=${batchPage}&uiPage=${uiPage}`
+      return queueFetch<PaginatedBatchResult<PullRequestItem>>(url, 'high')
     },
     getNextPageParam: (lastPage, allPages) => {
       if (lastPage.hasMore) {
@@ -126,11 +159,16 @@ export function usePullRequests(
     initialPageParam: 1,
     retry: (failureCount, error) => {
       if (error instanceof ReauthRequiredError) {
-        return false
+        handleReauthError()
       }
       return failureCount < 3
     },
   })
+
+  // Check for reauth error after query completes
+  if (error instanceof ReauthRequiredError) {
+    handleReauthError()
+  }
 
   const allItems = data?.pages.flatMap((page) => page.items) ?? []
 
@@ -162,10 +200,8 @@ export function useDiscussions(
     queryFn: async ({ pageParam }) => {
       const params = (pageParam as { cursor: string | null; uiPage: number }) || { cursor: null, uiPage: 1 }
       const cursorParam = params.cursor ? `&cursor=${encodeURIComponent(params.cursor)}` : ''
-      const response = await fetch(
-        `/api/github/${encodeURIComponent(repoId)}/discussions?uiPage=${params.uiPage}${cursorParam}`
-      )
-      return handleApiResponse<PaginatedBatchResult<DiscussionItem>>(response)
+      const url = `/api/github/${encodeURIComponent(repoId)}/discussions?uiPage=${params.uiPage}${cursorParam}`
+      return queueFetch<PaginatedBatchResult<DiscussionItem>>(url, 'high')
     },
     getNextPageParam: (lastPage, allPages) => {
       const currentParams = allPages.length > 0 
@@ -193,11 +229,16 @@ export function useDiscussions(
     initialPageParam: { cursor: null, uiPage: 1 } as { cursor: string | null; uiPage: number },
     retry: (failureCount, error) => {
       if (error instanceof ReauthRequiredError) {
-        return false
+        handleReauthError()
       }
       return failureCount < 3
     },
   })
+
+  // Check for reauth error after query completes
+  if (error instanceof ReauthRequiredError) {
+    handleReauthError()
+  }
 
   const allItems = data?.pages.flatMap((page) => page.items) ?? []
 
@@ -208,6 +249,72 @@ export function useDiscussions(
     isFetchingNextPage,
     isLoading,
     error: error as Error | null,
+  }
+}
+
+export function createPrefetchFunctions(queryClient: QueryClient) {
+  return {
+    prefetchRepoData: async (owner: string, repository: string, priority: 'high' | 'low' = 'low'): Promise<void> => {
+      const repoId = `${owner}/${repository}`
+
+      try {
+        await Promise.all([
+          (async () => {
+            const { batchPage, uiPage } = calculatePagination(1)
+            const url = `/api/github/${encodeURIComponent(repoId)}/releases?batchPage=${batchPage}&uiPage=${uiPage}`
+
+            // Always add to queue to allow priority upgrades
+            const data = await queueFetch<PaginatedBatchResult<ReleaseItem>>(url, priority)
+
+            // Update TanStack Query cache with the result
+            queryClient.setQueryData(
+              [GITHUB_KEY, 'releases', owner, repository],
+              (oldData: { pages: PaginatedBatchResult<ReleaseItem>[]; pageParams: number[] } | undefined) => {
+                if (oldData) {
+                  return {
+                    ...oldData,
+                    pages: [data, ...oldData.pages.slice(1)],
+                  }
+                }
+                return {
+                  pages: [data],
+                  pageParams: [1],
+                }
+              }
+            )
+          })(),
+          (async () => {
+            const { batchPage, uiPage } = calculatePagination(1)
+            const url = `/api/github/${encodeURIComponent(repoId)}/pull-requests?batchPage=${batchPage}&uiPage=${uiPage}`
+
+            // Always add to queue to allow priority upgrades
+            const data = await queueFetch<PaginatedBatchResult<PullRequestItem>>(url, priority)
+
+            // Update TanStack Query cache with the result
+            queryClient.setQueryData(
+              [GITHUB_KEY, 'pullRequests', owner, repository],
+              (oldData: { pages: PaginatedBatchResult<PullRequestItem>[]; pageParams: number[] } | undefined) => {
+                if (oldData) {
+                  return {
+                    ...oldData,
+                    pages: [data, ...oldData.pages.slice(1)],
+                  }
+                }
+                return {
+                  pages: [data],
+                  pageParams: [1],
+                }
+              }
+            )
+          })(),
+        ])
+      } catch (error) {
+        if (error instanceof ReauthRequiredError) {
+          handleReauthError()
+        }
+        throw error
+      }
+    },
   }
 }
 

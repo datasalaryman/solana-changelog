@@ -1,5 +1,5 @@
-import { useEffect, useRef, useCallback, useState } from 'react'
-import { Loader2, Copy, Link2, Check } from 'lucide-react'
+import { useEffect, useRef, useCallback } from 'react'
+import { Loader2, Copy, Link2 } from 'lucide-react'
 import type { PullRequestItem } from '../types/github'
 
 interface PullRequestListProps {
@@ -9,81 +9,59 @@ interface PullRequestListProps {
   onLoadMore: () => void
 }
 
+const STATUS_COLORS: Record<string, string> = {
+  open: 'bg-emerald-100 text-emerald-700 border-emerald-200',
+  merged: 'bg-purple-100 text-purple-700 border-purple-200',
+  closed: 'bg-red-100 text-red-700 border-red-200',
+}
+
 function getStatusColor(status: string): string {
-  switch (status.toLowerCase()) {
-    case 'open':
-      return 'bg-emerald-100 text-emerald-700 border-emerald-200'
-    case 'merged':
-      return 'bg-purple-100 text-purple-700 border-purple-200'
-    case 'closed':
-      return 'bg-red-100 text-red-700 border-red-200'
-    default:
-      return 'bg-gray-100 text-gray-700 border-gray-200'
-  }
-}
-
-interface TooltipButtonProps {
-  children: React.ReactNode
-  tooltip: string
-  onClick: (e: React.MouseEvent) => void
-}
-
-function TooltipButton({ children, tooltip, onClick }: TooltipButtonProps) {
-  const [showTooltip, setShowTooltip] = useState(false)
-
-  return (
-    <div className="relative">
-      <button
-        onClick={onClick}
-        onMouseEnter={() => setShowTooltip(true)}
-        onMouseLeave={() => setShowTooltip(false)}
-        className="flex h-7 w-7 items-center justify-center rounded-md text-[var(--sea-ink-soft)] transition-colors hover:bg-[var(--sand)] hover:text-[var(--sea-ink)]"
-      >
-        {children}
-      </button>
-      {showTooltip && (
-        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 bg-gray-900 text-white text-xs rounded whitespace-nowrap z-10">
-          {tooltip}
-          <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900" />
-        </div>
-      )}
-    </div>
-  )
+  return STATUS_COLORS[status.toLowerCase()] || 'bg-gray-100 text-gray-700 border-gray-200'
 }
 
 function CopyButton({ text }: { text: string }) {
-  const [copied, setCopied] = useState(false)
-
-  const handleCopy = (e: React.MouseEvent) => {
+  const handleClick = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
     navigator.clipboard.writeText(text)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+    const btn = e.currentTarget as HTMLButtonElement
+    btn.innerHTML = '<svg class="h-3.5 w-3.5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>'
+    setTimeout(() => {
+      btn.innerHTML = '<svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>'
+    }, 2000)
   }
 
   return (
-    <TooltipButton tooltip="Copy title to clipboard" onClick={handleCopy}>
-      {copied ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
-    </TooltipButton>
+    <button
+      onClick={handleClick}
+      title="Copy title to clipboard"
+      className="flex h-7 w-7 items-center justify-center rounded-md text-[var(--sea-ink-soft)] transition-colors hover:bg-[var(--sand)] hover:text-[var(--sea-ink)]"
+    >
+      <Copy className="h-3.5 w-3.5" />
+    </button>
   )
 }
 
 function LinkButton({ url }: { url: string }) {
-  const [copied, setCopied] = useState(false)
-
-  const handleCopy = (e: React.MouseEvent) => {
+  const handleClick = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
     navigator.clipboard.writeText(url)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+    const btn = e.currentTarget as HTMLButtonElement
+    btn.innerHTML = '<svg class="h-3.5 w-3.5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>'
+    setTimeout(() => {
+      btn.innerHTML = '<svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>'
+    }, 2000)
   }
 
   return (
-    <TooltipButton tooltip="Copy GitHub link to clipboard" onClick={handleCopy}>
-      {copied ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Link2 className="h-3.5 w-3.5" />}
-    </TooltipButton>
+    <button
+      onClick={handleClick}
+      title="Copy GitHub link to clipboard"
+      className="flex h-7 w-7 items-center justify-center rounded-md text-[var(--sea-ink-soft)] transition-colors hover:bg-[var(--sand)] hover:text-[var(--sea-ink)]"
+    >
+      <Link2 className="h-3.5 w-3.5" />
+    </button>
   )
 }
 
@@ -93,7 +71,6 @@ export function PullRequestList({
   isFetchingNextPage,
   onLoadMore,
 }: PullRequestListProps) {
-  const observerRef = useRef<IntersectionObserver | null>(null)
   const loadMoreRef = useRef<HTMLDivElement | null>(null)
 
   const handleObserver = useCallback(
@@ -110,18 +87,16 @@ export function PullRequestList({
     const element = loadMoreRef.current
     if (!element) return
 
-    observerRef.current = new IntersectionObserver(handleObserver, {
+    const observer = new IntersectionObserver(handleObserver, {
       root: null,
       rootMargin: '100px',
       threshold: 0,
     })
 
-    observerRef.current.observe(element)
+    observer.observe(element)
 
     return () => {
-      if (observerRef.current) {
-        observerRef.current.disconnect()
-      }
+      observer.disconnect()
     }
   }, [handleObserver])
 
@@ -172,7 +147,6 @@ export function PullRequestList({
         </div>
       )}
 
-      {/* Load more trigger */}
       <div
         ref={loadMoreRef}
         className="mt-4 flex items-center justify-center py-4"

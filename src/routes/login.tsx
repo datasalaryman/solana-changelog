@@ -1,4 +1,4 @@
-import { createFileRoute, Navigate } from '@tanstack/react-router'
+import { createFileRoute, Navigate, useSearch } from '@tanstack/react-router'
 import { Loader2 } from 'lucide-react'
 import { useState } from 'react'
 import { authClient } from '../lib/auth-client'
@@ -6,12 +6,17 @@ import { useSession } from '../hooks/useSession'
 
 export const Route = createFileRoute('/login')({
   component: LoginPage,
+  validateSearch: (search: Record<string, unknown>): { reauth?: boolean } => ({
+    reauth: search.reauth === true ? true : undefined,
+  }),
 })
 
 function LoginPage() {
   const { data: session, isLoading } = useSession()
   const [error, setError] = useState<string | null>(null)
   const [isSigningIn, setIsSigningIn] = useState(false)
+  const search = useSearch({ from: '/login' })
+  const isReauth = search.reauth === true
 
   if (isLoading) {
     return (
@@ -64,6 +69,12 @@ function LoginPage() {
             Sign in to access the Solana Technical Update Dashboard
           </p>
         </div>
+
+        {isReauth && (
+          <div className="rounded-md bg-amber-50 p-3 text-sm text-amber-700 border border-amber-200">
+            Your session has expired. Please sign in again to continue.
+          </div>
+        )}
 
         {error && (
           <div className="rounded-md bg-red-50 p-3 text-sm text-red-600">

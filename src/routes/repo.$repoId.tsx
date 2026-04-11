@@ -5,12 +5,24 @@ import { ReleaseList } from '../components/ReleaseList'
 import { PullRequestList } from '../components/PullRequestList'
 import { DashboardLayout } from '../components/DashboardLayout'
 import { useRepository } from '../hooks/useRepositories'
-import { useReleases, usePullRequests, ReauthRequiredError } from '../hooks/useGitHubData'
+import { useReleases, usePullRequests } from '../hooks/useGitHubData'
 import { parseRepoId } from '../types/repository'
 import { useSession } from '../hooks/useSession'
+import { queryClient } from './__root'
 
 export const Route = createFileRoute('/repo/$repoId')({
   component: RepositoryPage,
+  onEnter: async ({ params }) => {
+    const { repoId } = params
+    const { owner, repository } = parseRepoId(repoId)
+    // Invalidate queries for this repo to ensure high priority fetches when component mounts
+    await queryClient.invalidateQueries({
+      queryKey: ['github', 'releases', owner, repository],
+    })
+    await queryClient.invalidateQueries({
+      queryKey: ['github', 'pullRequests', owner, repository],
+    })
+  },
 })
 
 type TabType = 'releases' | 'pullRequests' | 'discussions'
@@ -99,11 +111,6 @@ function RepositoryPage() {
   }
 
   const error = getError()
-  
-  if (error instanceof ReauthRequiredError) {
-    return <Navigate to="/login" />
-  }
-  
   const errorMessage = error instanceof Error ? error.message : error ? 'Failed to load' : null
 
   return (
