@@ -1,6 +1,7 @@
 import { useEffect, useRef, useCallback, useState } from 'react'
 import { Loader2, Copy, Link2, Check } from 'lucide-react'
 import type { DiscussionItem } from '../types/github'
+import { formatUTC } from '../lib/utils'
 
 interface DiscussionListProps {
   items: DiscussionItem[]
@@ -85,6 +86,33 @@ function LinkButton({ url }: { url: string }) {
   )
 }
 
+interface DateTooltipProps {
+  date: string
+  originalDate: string
+}
+
+function DateTooltip({ date, originalDate }: DateTooltipProps) {
+  const [showTooltip, setShowTooltip] = useState(false)
+
+  return (
+    <div className="relative">
+      <span
+        onMouseEnter={() => setShowTooltip(true)}
+        onMouseLeave={() => setShowTooltip(false)}
+        className="cursor-default"
+      >
+        {date}
+      </span>
+      {showTooltip && (
+        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1 bg-gray-900 text-white text-xs rounded whitespace-nowrap z-10">
+          {formatUTC(originalDate)}
+          <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900" />
+        </div>
+      )}
+    </div>
+  )
+}
+
 export function DiscussionList({
   items,
   hasNextPage,
@@ -152,7 +180,7 @@ export function DiscussionList({
             <div className="ml-4 flex items-center gap-1">
               {item.date && (
                 <span className="mr-2 text-xs text-[var(--sea-ink-soft)]">
-                  {item.date}
+                  <DateTooltip date={item.date} originalDate={item.originalDate} />
                 </span>
               )}
               <CopyButton text={item.title} />

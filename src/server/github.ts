@@ -81,6 +81,7 @@ export async function fetchReleases(
     title: release.tag_name,
     subtitle: release.name || release.body?.slice(0, 100) || 'No description',
     date: formatRelativeDate(release.published_at || release.created_at),
+    originalDate: release.published_at || release.created_at,
     url: release.html_url,
   }))
 
@@ -142,6 +143,7 @@ export async function fetchPullRequests(
       subtitle: `#${pr.number} by @${pr.user.login}`,
       status,
       date: formatRelativeDate(pr.updated_at),
+      originalDate: pr.updated_at,
       url: pr.html_url,
     }
   })
@@ -258,6 +260,7 @@ export async function fetchDiscussions(
     subtitle: `Started by @${discussion.author?.login ?? 'unknown'}`,
     status: discussion.answerChosenAt ? 'Answered' : 'Active',
     date: formatRelativeDate(discussion.updatedAt),
+    originalDate: discussion.updatedAt,
     url: discussion.url,
   }))
 

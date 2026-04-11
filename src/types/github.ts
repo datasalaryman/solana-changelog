@@ -47,6 +47,7 @@ export interface ReleaseItem {
   title: string
   subtitle: string
   date: string
+  originalDate: string
   url: string
 }
 
@@ -56,6 +57,7 @@ export interface PullRequestItem {
   subtitle: string
   status: 'Open' | 'Merged' | 'Closed'
   date: string
+  originalDate: string
   url: string
 }
 
@@ -65,5 +67,6 @@ export interface DiscussionItem {
   subtitle: string
   status: 'Active' | 'Answered'
   date: string
+  originalDate: string
   url: string
 }
