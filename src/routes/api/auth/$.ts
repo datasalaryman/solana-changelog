@@ -8,8 +8,6 @@ export const Route = createFileRoute('/api/auth/$')({
       GET: async ({ request }) => {
         try {
           const url = new URL(request.url)
-          
-          // The request URL might be missing the host - better-auth needs a full URL
           const fullUrl = new URL(url.pathname + url.search, process.env.BETTER_AUTH_URL || 'http://localhost:3000')
           
           const fullRequest = new Request(fullUrl, {
@@ -19,7 +17,6 @@ export const Route = createFileRoute('/api/auth/$')({
           
           const response = await auth.handler(fullRequest)
           
-          // If it's a redirect, ensure we return it properly
           if (response.status >= 300 && response.status < 400) {
             return new Response(null, {
               status: response.status,
@@ -29,18 +26,14 @@ export const Route = createFileRoute('/api/auth/$')({
           
           return response
         } catch (error) {
-          console.error('Auth handler error:', error)
           return json({ error: 'Internal server error', details: error instanceof Error ? error.message : String(error) }, { status: 500 })
         }
       },
       POST: async ({ request }) => {
         try {
           const url = new URL(request.url)
-          
-          // Clone the request to get the body
           const body = await request.text()
           
-          // The request URL might be missing the host - better-auth needs a full URL
           const fullUrl = new URL(url.pathname + url.search, process.env.BETTER_AUTH_URL || 'http://localhost:3000')
           const fullRequest = new Request(fullUrl, {
             method: request.method,
@@ -51,7 +44,6 @@ export const Route = createFileRoute('/api/auth/$')({
           const response = await auth.handler(fullRequest)
           return response
         } catch (error) {
-          console.error('Auth handler error:', error)
           return json({ error: 'Internal server error', details: error instanceof Error ? error.message : String(error) }, { status: 500 })
         }
       },

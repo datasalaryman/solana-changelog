@@ -8,7 +8,9 @@ export function useSession() {
       const result = await authClient.getSession()
       return result.data
     },
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 60 * 4 * 1000,
+    refetchInterval: 60 * 4 * 1000,
+    refetchOnWindowFocus: true,
   })
 }
 
@@ -17,7 +19,6 @@ export function useSignOut() {
   
   return async () => {
     await authClient.signOut()
-    // Remove session data from cache
     queryClient.removeQueries({ queryKey: ['session'] })
   }
 }

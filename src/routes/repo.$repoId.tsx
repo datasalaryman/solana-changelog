@@ -3,10 +3,9 @@ import { useState } from 'react'
 import { GitBranch, Loader2, CircleDot, Tag, GitPullRequest, MessageSquare } from 'lucide-react'
 import { ReleaseList } from '../components/ReleaseList'
 import { PullRequestList } from '../components/PullRequestList'
-import { DiscussionList } from '../components/DiscussionList'
 import { DashboardLayout } from '../components/DashboardLayout'
 import { useRepository } from '../hooks/useRepositories'
-import { useReleases, usePullRequests, useDiscussions } from '../hooks/useGitHubData'
+import { useReleases, usePullRequests, ReauthRequiredError } from '../hooks/useGitHubData'
 import { parseRepoId } from '../types/repository'
 import { useSession } from '../hooks/useSession'
 
@@ -22,12 +21,10 @@ function RepositoryPage() {
   const { data: repository, isLoading: isLoadingRepo } = useRepository(repoId)
   const [activeTab, setActiveTab] = useState<TabType>('releases')
 
-  // Parse repo info for API calls (must be called before any early returns)
   const { owner, repository: repoName } = repository 
     ? { owner: repository.owner, repository: repository.repository }
     : parseRepoId(repoId)
 
-  // Always call these hooks, regardless of auth state
   const { 
     data: releases, 
     fetchNextPage: fetchNextReleases,
@@ -46,16 +43,6 @@ function RepositoryPage() {
     error: prsError 
   } = usePullRequests(owner, repoName)
 
-  const { 
-    data: discussions, 
-    fetchNextPage: fetchNextDiscussions,
-    hasNextPage: hasNextDiscussions,
-    isFetchingNextPage: isFetchingNextDiscussions,
-    isLoading: isLoadingDiscussions,
-    error: discussionsError 
-  } = useDiscussions(owner, repoName)
-
-  // Now handle conditional rendering after all hooks are called
   if (isLoadingSession) {
     return (
       <DashboardLayout>
@@ -97,23 +84,26 @@ function RepositoryPage() {
   }
 
   const isLoading = (activeTab === 'releases' && isLoadingReleases) || 
-                    (activeTab === 'pullRequests' && isLoadingPRs) || 
-                    (activeTab === 'discussions' && isLoadingDiscussions)
+                    (activeTab === 'pullRequests' && isLoadingPRs)
 
   const tabs = [
     { id: 'releases' as TabType, label: 'Releases', icon: Tag },
     { id: 'pullRequests' as TabType, label: 'Pull Requests', icon: GitPullRequest },
-    { id: 'discussions' as TabType, label: 'Discussions', icon: MessageSquare },
+    { id: 'discussions' as TabType, label: 'Discussions', icon: MessageSquare, disabled: true, subtitle: 'coming soon!' },
   ]
 
   const getError = () => {
     if (activeTab === 'releases' && releasesError) return releasesError
     if (activeTab === 'pullRequests' && prsError) return prsError
-    if (activeTab === 'discussions' && discussionsError) return discussionsError
     return null
   }
 
   const error = getError()
+  
+  if (error instanceof ReauthRequiredError) {
+    return <Navigate to="/login" />
+  }
+  
   const errorMessage = error instanceof Error ? error.message : error ? 'Failed to load' : null
 
   return (
@@ -133,15 +123,23 @@ function RepositoryPage() {
               return (
                 <button
                   key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`inline-flex items-center gap-2 border-b-2 px-4 py-2 text-sm font-medium transition-colors ${
-                    activeTab === tab.id
-                      ? 'border-[var(--lagoon-deep)] text-[var(--lagoon-deep)]'
-                      : 'border-transparent text-[var(--sea-ink-soft)] hover:border-[var(--line)] hover:text-[var(--sea-ink)]'
+                  onClick={() => !tab.disabled && setActiveTab(tab.id)}
+                  disabled={tab.disabled}
+                  className={`inline-flex flex-col items-center border-b-2 px-4 py-2 text-sm font-medium transition-colors ${
+                    tab.disabled
+                      ? 'cursor-not-allowed border-transparent text-[var(--sea-ink-soft)] opacity-50'
+                      : activeTab === tab.id
+                        ? 'border-[var(--lagoon-deep)] text-[var(--lagoon-deep)]'
+                        : 'border-transparent text-[var(--sea-ink-soft)] hover:border-[var(--line)] hover:text-[var(--sea-ink)]'
                   }`}
                 >
-                  <TabIcon className="h-4 w-4" />
-                  {tab.label}
+                  <span className="inline-flex items-center gap-2">
+                    <TabIcon className="h-4 w-4" />
+                    {tab.label}
+                  </span>
+                  {tab.subtitle && (
+                    <span className="text-xs opacity-60">{tab.subtitle}</span>
+                  )}
                 </button>
               )
             })}
@@ -151,11 +149,6 @@ function RepositoryPage() {
         {errorMessage && (
           <div className="mb-4 rounded-md bg-red-50 p-4 text-sm text-red-600">
             <p>{errorMessage}</p>
-            {activeTab === 'discussions' && (
-              <p className="mt-1 text-xs opacity-75">
-                Note: Discussions require a GitHub token. Some repositories may not have discussions enabled.
-              </p>
-            )}
           </div>
         )}
 
@@ -179,14 +172,6 @@ function RepositoryPage() {
             hasNextPage={hasNextPullRequests}
             isFetchingNextPage={isFetchingNextPullRequests}
             onLoadMore={fetchNextPullRequests}
-          />
-        )}
-        {!isLoading && !errorMessage && activeTab === 'discussions' && (
-          <DiscussionList
-            items={discussions}
-            hasNextPage={hasNextDiscussions}
-            isFetchingNextPage={isFetchingNextDiscussions}
-            onLoadMore={fetchNextDiscussions}
           />
         )}
       </div>

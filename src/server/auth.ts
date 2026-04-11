@@ -1,35 +1,53 @@
 import { auth } from '../lib/auth'
+import { db } from '../db'
+import { account } from '../db/schema'
+import { eq, and } from 'drizzle-orm'
 
-interface Account {
-  providerId: string
-  accessToken?: string
-}
-
-export async function getUserGitHubToken(request: Request): Promise<string | undefined> {
+export async function getUserGitHubToken(request: Request): Promise<{ token: string; needsReauth: boolean }> {
   try {
-    // Get the session from the request
     const session = await auth.api.getSession({
       headers: request.headers,
     })
 
     if (!session?.user?.id) {
-      return undefined
+      return { token: undefined as unknown as string, needsReauth: true }
     }
 
-    // Get the user's GitHub account to access the access token
-    // The account data is stored by Better Auth during OAuth
-    const accounts = await auth.api.listUserAccounts({
-      headers: request.headers,
-    }) as Account[] | undefined
+    const accounts = await db
+      .select()
+      .from(account)
+      .where(and(
+        eq(account.userId, session.user.id),
+        eq(account.providerId, 'github')
+      ))
 
-    const githubAccount = accounts?.find(
-      (account) => account.providerId === 'github'
-    )
+    if (accounts.length === 0) {
+      return { token: undefined as unknown as string, needsReauth: true }
+    }
 
-    // Return the access token from the GitHub account
-    return githubAccount?.accessToken
+    const githubAccount = accounts[0]
+
+    if (!githubAccount.accessToken) {
+      return { token: undefined as unknown as string, needsReauth: true }
+    }
+
+    if (githubAccount.accessTokenExpiresAt) {
+      const expiresAt = new Date(githubAccount.accessTokenExpiresAt)
+      if (expiresAt < new Date()) {
+        return { token: undefined as unknown as string, needsReauth: true }
+      }
+    }
+
+    return { token: githubAccount.accessToken, needsReauth: false }
   } catch (error) {
     console.error('Error getting user GitHub token:', error)
-    return undefined
+    return { token: undefined as unknown as string, needsReauth: true }
   }
+}
+
+export async function getGitHubToken(_owner: string, tokenResult?: { token: string; needsReauth: boolean }): Promise<{ token: string | null; needsReauth: boolean }> {
+  if (!tokenResult) {
+    return { token: null, needsReauth: true }
+  }
+  return { token: tokenResult.token ?? null, needsReauth: tokenResult.needsReauth }
 }

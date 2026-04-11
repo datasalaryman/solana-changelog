@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { json } from '@tanstack/react-start'
 import { fetchReleases } from '../server/github'
-import { getUserGitHubToken } from '../server/auth'
+import { getUserGitHubToken, getGitHubToken } from '../server/auth'
 
 export const Route = createFileRoute('/api/github/$repoId/releases')({
   server: {
@@ -14,16 +14,23 @@ export const Route = createFileRoute('/api/github/$repoId/releases')({
           return json({ error: 'Invalid repository format. Expected: owner/repo' }, { status: 400 })
         }
 
-        // Get pagination params
         const url = new URL(request.url)
         const batchPage = parseInt(url.searchParams.get('batchPage') || '1', 10)
         const uiPage = parseInt(url.searchParams.get('uiPage') || '1', 10)
 
-        // Get user's GitHub token if authenticated
-        const userToken = await getUserGitHubToken(request)
+        const tokenResult = await getUserGitHubToken(request)
+
+        if (tokenResult.needsReauth || !tokenResult.token) {
+          return json({ 
+            error: 'GitHub authorization required. Please log in again.',
+            code: 'REAUTH_REQUIRED'
+          }, { status: 401 })
+        }
+
+        const { token } = await getGitHubToken(owner, tokenResult)
 
         try {
-          const result = await fetchReleases(owner, repo, batchPage, uiPage, userToken)
+          const result = await fetchReleases(owner, repo, batchPage, uiPage, token ?? undefined)
           return json(result)
         } catch (error) {
           const message = error instanceof Error ? error.message : 'Failed to fetch releases'

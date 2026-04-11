@@ -12,15 +12,13 @@ const GITHUB_PER_PAGE = 100 // Fetch 100 from GitHub to minimize API calls
 const UI_PAGE_SIZE = 30 // Show 30 items at a time in UI
 
 function buildGitHubHeaders(userToken?: string): Record<string, string> {
-  // Use user's access token if available, otherwise fall back to env token
-  const token = userToken || process.env.GITHUB_TOKEN
   const headers: Record<string, string> = {
     Accept: 'application/vnd.github+json',
     'X-GitHub-Api-Version': '2022-11-28',
   }
 
-  if (token) {
-    headers.Authorization = `Bearer ${token}`
+  if (userToken) {
+    headers.Authorization = `Bearer ${userToken}`
   }
 
   return headers
@@ -61,7 +59,6 @@ export async function fetchReleases(
 ): Promise<PaginatedBatchResult<ReleaseItem>> {
   const headers = buildGitHubHeaders(userToken)
   
-  // Fetch 100 items from GitHub
   const response = await fetch(
     `${BASE_URL}/repos/${owner}/${repository}/releases?per_page=${GITHUB_PER_PAGE}&page=${batchPage}`,
     { headers }
@@ -71,6 +68,9 @@ export async function fetchReleases(
     if (response.status === 404) {
       return { items: [], batchPage: 1, uiPage: 1, totalFetched: 0, hasMore: false }
     }
+    const rateLimit = response.headers.get('x-ratelimit-remaining')
+    const rateLimitReset = response.headers.get('x-ratelimit-reset')
+    console.error(`GitHub API error ${response.status} for ${owner}/${repository} releases. Rate limit remaining: ${rateLimit}, Resets at: ${rateLimitReset ? new Date(parseInt(rateLimitReset) * 1000).toISOString() : 'unknown'}`)
     throw new Error(`GitHub API error ${response.status}`)
   }
 
@@ -118,6 +118,9 @@ export async function fetchPullRequests(
   )
 
   if (!response.ok) {
+    const rateLimit = response.headers.get('x-ratelimit-remaining')
+    const rateLimitReset = response.headers.get('x-ratelimit-reset')
+    console.error(`GitHub API error ${response.status} for ${owner}/${repository} pull requests. Rate limit remaining: ${rateLimit}, Resets at: ${rateLimitReset ? new Date(parseInt(rateLimitReset) * 1000).toISOString() : 'unknown'}`)
     throw new Error(`GitHub API error ${response.status}`)
   }
 
@@ -200,7 +203,7 @@ export async function fetchDiscussions(
   const headers = buildGitHubHeaders(userToken)
   
   if (!headers.Authorization) {
-    throw new Error('GITHUB_TOKEN environment variable is required to fetch discussions')
+    throw new Error('GitHub authentication required to fetch discussions')
   }
   
   const response = await fetch(`${BASE_URL}/graphql`, {

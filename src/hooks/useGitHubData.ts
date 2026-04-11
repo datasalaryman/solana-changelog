@@ -5,7 +5,7 @@ import type { PaginatedBatchResult } from '../server/github'
 const GITHUB_KEY = 'github'
 const UI_PAGE_SIZE = 30
 const BATCH_SIZE = 100
-const UI_PAGES_PER_BATCH = Math.ceil(BATCH_SIZE / UI_PAGE_SIZE) // 4
+const UI_PAGES_PER_BATCH = Math.ceil(BATCH_SIZE / UI_PAGE_SIZE)
 
 interface UseInfiniteDataResult<T> {
   data: T[]
@@ -16,11 +16,28 @@ interface UseInfiniteDataResult<T> {
   error: Error | null
 }
 
-// Calculate the batch page and UI page from a sequential page number
 function calculatePagination(pageNum: number): { batchPage: number; uiPage: number } {
   const batchPage = Math.ceil(pageNum / UI_PAGES_PER_BATCH)
   const uiPage = ((pageNum - 1) % UI_PAGES_PER_BATCH) + 1
   return { batchPage, uiPage }
+}
+
+class ReauthRequiredError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'ReauthRequiredError'
+  }
+}
+
+async function handleApiResponse<T>(response: Response): Promise<T> {
+  if (!response.ok) {
+    const err = await response.json()
+    if (err.code === 'REAUTH_REQUIRED') {
+      throw new ReauthRequiredError(err.error || 'Reauthorization required')
+    }
+    throw new Error(err.error || 'API request failed')
+  }
+  return response.json()
 }
 
 export function useReleases(
@@ -41,17 +58,12 @@ export function useReleases(
     queryFn: async ({ pageParam = 1 }) => {
       const { batchPage, uiPage } = calculatePagination(pageParam as number)
       const response = await fetch(
-        `/api/github/${encodeURIComponent(repoId)}/releases?batchPage=${batchPage}&uiPage=${uiPage}`
+        `/api/github/${encodeURIComponent(repoId)}/releases?batchPage=${batchPage}&uiPage=${uiPage}`,
+        { credentials: 'include' }
       )
-      if (!response.ok) {
-        const err = await response.json()
-        throw new Error(err.error || 'Failed to fetch releases')
-      }
-      return response.json()
+      return handleApiResponse<PaginatedBatchResult<ReleaseItem>>(response)
     },
     getNextPageParam: (lastPage, allPages) => {
-      // If there are more UI pages in this batch, increment by 1
-      // If we need a new batch, the calculatePagination function will handle it
       if (lastPage.hasMore) {
         return allPages.length + 1
       }
@@ -60,6 +72,12 @@ export function useReleases(
     staleTime: 5 * 60 * 1000,
     enabled: !!owner && !!repository,
     initialPageParam: 1,
+    retry: (failureCount, error) => {
+      if (error instanceof ReauthRequiredError) {
+        return false
+      }
+      return failureCount < 3
+    },
   })
 
   const allItems = data?.pages.flatMap((page) => page.items) ?? []
@@ -92,13 +110,10 @@ export function usePullRequests(
     queryFn: async ({ pageParam = 1 }) => {
       const { batchPage, uiPage } = calculatePagination(pageParam as number)
       const response = await fetch(
-        `/api/github/${encodeURIComponent(repoId)}/pull-requests?batchPage=${batchPage}&uiPage=${uiPage}`
+        `/api/github/${encodeURIComponent(repoId)}/pull-requests?batchPage=${batchPage}&uiPage=${uiPage}`,
+        { credentials: 'include' }
       )
-      if (!response.ok) {
-        const err = await response.json()
-        throw new Error(err.error || 'Failed to fetch pull requests')
-      }
-      return response.json()
+      return handleApiResponse<PaginatedBatchResult<PullRequestItem>>(response)
     },
     getNextPageParam: (lastPage, allPages) => {
       if (lastPage.hasMore) {
@@ -109,6 +124,12 @@ export function usePullRequests(
     staleTime: 5 * 60 * 1000,
     enabled: !!owner && !!repository,
     initialPageParam: 1,
+    retry: (failureCount, error) => {
+      if (error instanceof ReauthRequiredError) {
+        return false
+      }
+      return failureCount < 3
+    },
   })
 
   const allItems = data?.pages.flatMap((page) => page.items) ?? []
@@ -139,20 +160,14 @@ export function useDiscussions(
   } = useInfiniteQuery<PaginatedBatchResult<DiscussionItem>>({
     queryKey: [GITHUB_KEY, 'discussions', owner, repository],
     queryFn: async ({ pageParam }) => {
-      // pageParam is { cursor: string | null, uiPage: number }
       const params = (pageParam as { cursor: string | null; uiPage: number }) || { cursor: null, uiPage: 1 }
       const cursorParam = params.cursor ? `&cursor=${encodeURIComponent(params.cursor)}` : ''
       const response = await fetch(
         `/api/github/${encodeURIComponent(repoId)}/discussions?uiPage=${params.uiPage}${cursorParam}`
       )
-      if (!response.ok) {
-        const err = await response.json()
-        throw new Error(err.error || 'Failed to fetch discussions')
-      }
-      return response.json()
+      return handleApiResponse<PaginatedBatchResult<DiscussionItem>>(response)
     },
     getNextPageParam: (lastPage, allPages) => {
-      // For discussions, we need to track cursor and UI page within batch
       const currentParams = allPages.length > 0 
         ? (allPages[allPages.length - 1] as PaginatedBatchResult<DiscussionItem>)
         : null
@@ -161,25 +176,27 @@ export function useDiscussions(
         return undefined
       }
 
-      // Check if we have more UI pages in current batch
       if (lastPage.uiPage < UI_PAGES_PER_BATCH && lastPage.items.length === UI_PAGE_SIZE) {
-        // More items available in current batch, just increment UI page
         return { 
-          cursor: currentParams?.batchPage ? null : null, // Keep same cursor
+          cursor: currentParams?.batchPage ? null : null,
           uiPage: lastPage.uiPage + 1 
         }
       }
 
-      // Need to fetch next batch from GitHub
-      // The server will provide the cursor for the next batch
       return { 
-        cursor: lastPage.hasMore ? 'next' : null, // Server handles cursor
+        cursor: lastPage.hasMore ? 'next' : null,
         uiPage: 1 
       }
     },
     staleTime: 5 * 60 * 1000,
     enabled: !!owner && !!repository,
     initialPageParam: { cursor: null, uiPage: 1 } as { cursor: string | null; uiPage: number },
+    retry: (failureCount, error) => {
+      if (error instanceof ReauthRequiredError) {
+        return false
+      }
+      return failureCount < 3
+    },
   })
 
   const allItems = data?.pages.flatMap((page) => page.items) ?? []
@@ -193,3 +210,5 @@ export function useDiscussions(
     error: error as Error | null,
   }
 }
+
+export { ReauthRequiredError }
