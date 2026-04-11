@@ -86,7 +86,7 @@ function LoginPage() {
           <button
             onClick={handleSignIn}
             disabled={isSigningIn}
-            className="flex w-full items-center justify-center gap-3 rounded-lg bg-[var(--fill)] px-4 py-3 text-sm font-medium text-[var(--sea-ink)] transition hover:bg-[var(--fill-hover)] border border-[var(--line)] disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex w-full items-center justify-center gap-3 rounded-lg bg-[var(--lagoon)] px-4 py-3 text-sm font-medium text-white transition-colors duration-200 hover:bg-[var(--lagoon-deep)] border border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isSigningIn ? (
               <Loader2 className="h-4 w-4 animate-spin" />
