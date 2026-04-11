@@ -1,26 +1,24 @@
-import { Link, useNavigate } from '@tanstack/react-router'
-import { LayoutDashboard, LogOut, User } from 'lucide-react'
-import ThemeToggle from './ThemeToggle'
-import { useSession, useSignOut } from '../hooks/useSession'
+import { Link } from '@tanstack/react-router'
+import { LayoutDashboard, Menu, X } from 'lucide-react'
+import UserMenu from './UserMenu'
+import { useSession } from '../hooks/useSession'
+import { useSidebar } from '../context/SidebarContext'
 
 export default function Header() {
-  const navigate = useNavigate()
-  const signOut = useSignOut()
   const { data: session, isLoading: isPending } = useSession()
-
-  const handleSignOut = async () => {
-    try {
-      await signOut()
-      // Redirect to login page after logout
-      navigate({ to: '/login' })
-    } catch (error) {
-      console.error('Sign out error:', error)
-    }
-  }
+  const { toggle, isOpen } = useSidebar()
 
   return (
     <header className="sticky top-0 z-50 border-b border-[var(--line)] bg-[var(--header-bg)] px-4 backdrop-blur-lg">
-      <nav className="flex h-14 items-center gap-4">
+      <nav className="flex h-14 items-center gap-3 sm:gap-4">
+        <button
+          onClick={toggle}
+          className="flex h-9 w-9 items-center justify-center rounded-lg text-[var(--sea-ink-soft)] transition hover:bg-[var(--link-bg-hover)] hover:text-[var(--sea-ink)] md:hidden"
+          aria-label={isOpen ? 'Close menu' : 'Open menu'}
+        >
+          {isOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+        </button>
+
         <Link
           to="/"
           className="flex items-center gap-2 text-[var(--sea-ink)] no-underline"
@@ -28,7 +26,7 @@ export default function Header() {
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-[var(--lagoon)] to-[var(--palm)]">
             <LayoutDashboard className="h-4 w-4 text-white" />
           </div>
-          <span className="font-semibold tracking-tight"><h1 className="inline">Solana Technical Update Dashboard</h1></span>
+          <span className="font-semibold tracking-tight text-sm sm:text-base"><h1 className="inline">Solana Technical Update Dashboard</h1></span>
         </Link>
 
         <div className="ml-auto flex items-center gap-2">
@@ -47,27 +45,7 @@ export default function Header() {
             </svg>
           </a>
 
-          <ThemeToggle />
-
-          {/* Show user info and logout when logged in */}
-          {!isPending && session && (
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-2 rounded-lg bg-[var(--fill)] px-3 py-1.5">
-                <User className="h-4 w-4 text-[var(--sea-ink-soft)]" />
-                <span className="text-sm text-[var(--sea-ink)] hidden sm:inline">
-                  {session.user.name || session.user.email}
-                </span>
-              </div>
-              <button
-                onClick={handleSignOut}
-                className="flex items-center gap-1.5 rounded-xl p-2 text-[var(--sea-ink-soft)] transition hover:bg-[var(--link-bg-hover)] hover:text-[var(--sea-ink)]"
-                title="Sign out"
-              >
-                <LogOut className="h-4 w-4" />
-                <span className="sr-only">Sign out</span>
-              </button>
-            </div>
-          )}
+          {!isPending && session && <UserMenu />}
         </div>
       </nav>
     </header>

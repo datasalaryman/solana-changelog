@@ -24,10 +24,10 @@ export function SectionCard({ title, icon, count, items }: SectionCardProps) {
 
   return (
     <div className="island-shell rounded-2xl overflow-hidden">
-      <div className="flex items-center justify-between border-b border-[var(--line)] px-5 py-4">
-        <div className="flex items-center gap-2">
-          <Icon className="h-5 w-5 text-[var(--lagoon-deep)]" />
-          <h2 className="font-semibold text-[var(--sea-ink)]">{title}</h2>
+      <div className="flex items-center justify-between border-b border-[var(--line)] px-3 py-3 sm:px-5 sm:py-4">
+        <div className="flex items-center gap-2 min-w-0">
+          <Icon className="h-4 w-4 sm:h-5 sm:w-5 text-[var(--lagoon-deep)] shrink-0" />
+          <h2 className="font-semibold text-sm sm:text-base text-[var(--sea-ink)] truncate">{title}</h2>
         </div>
         {count !== undefined && (
           <span className="rounded-full bg-[var(--lagoon)]/10 px-2.5 py-0.5 text-sm font-medium text-[var(--lagoon-deep)]">
@@ -40,10 +40,10 @@ export function SectionCard({ title, icon, count, items }: SectionCardProps) {
         {items.map((item) => (
           <div
             key={item.id}
-            className="group flex cursor-pointer items-center justify-between px-5 py-3 transition-colors hover:bg-[var(--link-bg-hover)]"
+            className="group flex cursor-pointer items-center justify-between px-3 py-3 sm:px-5 transition-colors hover:bg-[var(--link-bg-hover)]"
           >
             <div className="min-w-0 flex-1">
-              <p className="truncate font-medium text-[var(--sea-ink)] group-hover:text-[var(--lagoon-deep)]">
+              <p className="truncate text-sm sm:text-base font-medium text-[var(--sea-ink)] group-hover:text-[var(--lagoon-deep)]">
                 {item.title}
               </p>
               {item.subtitle && (
@@ -52,7 +52,7 @@ export function SectionCard({ title, icon, count, items }: SectionCardProps) {
                 </p>
               )}
             </div>
-            <div className="ml-4 flex items-center gap-3">
+            <div className="ml-3 sm:ml-4 flex items-center gap-2 sm:gap-3 shrink-0">
               {item.status && (
                 <span className="rounded-full bg-[var(--palm)]/10 px-2 py-0.5 text-xs font-medium text-[var(--palm)]">
                   {item.status}

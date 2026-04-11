@@ -47,7 +47,7 @@ function HomePage() {
   return (
     <DashboardLayout>
       <div className="flex h-full flex-col items-center justify-center text-center">
-        <div className="island-shell rounded-2xl p-10 max-w-md">
+        <div className="island-shell rounded-2xl p-6 sm:p-10 max-w-md">
           <h1 className="display-title mb-4 text-3xl font-bold text-[var(--sea-ink)]">
             Solana Technical Update Dashboard
           </h1>

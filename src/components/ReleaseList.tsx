@@ -163,7 +163,7 @@ export function ReleaseList({
                 )}
               </div>
             </div>
-            <div className="ml-4 flex items-center gap-1">
+            <div className="ml-2 hidden items-center gap-1 sm:ml-4 sm:flex">
               {item.date && (
                 <span className="mr-2 text-xs text-[var(--sea-ink-soft)]">
                   <DateTooltip date={item.date} originalDate={item.originalDate} />

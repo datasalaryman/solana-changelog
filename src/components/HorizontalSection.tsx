@@ -73,10 +73,10 @@ export function HorizontalSection({
   const endItem = Math.min(currentPage * 10, totalItems)
 
   return (
-    <section className="border-b border-[var(--line)] py-6 last:border-b-0">
-      <div className="mb-4 flex items-center gap-2">
-        <Icon className="h-5 w-5 text-[var(--lagoon-deep)]" />
-        <h2 className="font-semibold text-[var(--sea-ink)]">{title}</h2>
+    <section className="border-b border-[var(--line)] py-4 sm:py-6 last:border-b-0">
+      <div className="mb-3 sm:mb-4 flex items-center gap-2">
+        <Icon className="h-4 w-4 sm:h-5 sm:w-5 text-[var(--lagoon-deep)]" />
+        <h2 className="font-semibold text-sm sm:text-base text-[var(--sea-ink)]">{title}</h2>
       </div>
 
       <div className="space-y-2">
@@ -84,7 +84,7 @@ export function HorizontalSection({
           const content = (
             <>
               <div className="min-w-0 flex-1">
-                <p className="truncate font-medium text-[var(--sea-ink)] group-hover:text-[var(--lagoon-deep)]">
+                <p className="truncate text-sm sm:text-base font-medium text-[var(--sea-ink)] group-hover:text-[var(--lagoon-deep)]">
                   {item.title}
                 </p>
                 {item.subtitle && (
@@ -93,7 +93,7 @@ export function HorizontalSection({
                   </p>
                 )}
               </div>
-              <div className="ml-4 flex items-center gap-3">
+              <div className="ml-2 sm:ml-4 flex items-center gap-2 sm:gap-3 shrink-0">
                 {item.status && (
                   <span className="rounded-full bg-[var(--palm)]/10 px-2 py-0.5 text-xs font-medium text-[var(--palm)]">
                     {item.status}
@@ -109,7 +109,7 @@ export function HorizontalSection({
             </>
           )
 
-          const className = "group flex cursor-pointer items-center justify-between rounded-lg px-3 py-2.5 transition-colors hover:bg-[var(--link-bg-hover)]"
+          const className = "group flex cursor-pointer items-center justify-between rounded-lg px-2.5 py-2 sm:px-3 sm:py-2.5 transition-colors hover:bg-[var(--link-bg-hover)]"
 
           if (item.url) {
             return (
@@ -143,8 +143,8 @@ export function HorizontalSection({
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="mt-4 flex items-center justify-between rounded-lg bg-[var(--sand)]/50 px-3 py-2.5">
-          <span className="text-xs text-[var(--sea-ink-soft)]">
+        <div className="mt-3 sm:mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between rounded-lg bg-[var(--sand)]/50 px-3 py-2.5">
+          <span className="text-xs text-[var(--sea-ink-soft)] text-center">
             Showing {startItem}-{endItem} of {totalItems}
           </span>
           

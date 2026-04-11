@@ -116,15 +116,15 @@ function RepositoryPage() {
   return (
     <DashboardLayout>
       <div className="mx-auto max-w-4xl">
-        <div className="mb-6 flex items-center gap-3 border-b border-[var(--line)] pb-4">
-          <GitBranch className="h-5 w-5 text-[var(--lagoon-deep)]" />
-          <h1 className="text-lg font-semibold text-[var(--sea-ink)]">
+        <div className="mb-4 sm:mb-6 flex items-center gap-2 sm:gap-3 border-b border-[var(--line)] pb-3 sm:pb-4">
+          <GitBranch className="h-4 w-4 sm:h-5 sm:w-5 text-[var(--lagoon-deep)]" />
+          <h1 className="text-base sm:text-lg font-semibold text-[var(--sea-ink)] truncate">
             {repository.owner}/{repository.repository}
           </h1>
         </div>
 
-        <div className="mb-6 border-b border-[var(--line)]">
-          <nav className="-mb-px flex gap-1">
+        <div className="mb-4 sm:mb-6 border-b border-[var(--line)]">
+          <nav className="-mb-px flex gap-1 overflow-x-auto">
             {tabs.map((tab) => {
               const TabIcon = tab.icon
               return (
@@ -132,7 +132,7 @@ function RepositoryPage() {
                   key={tab.id}
                   onClick={() => !tab.disabled && setActiveTab(tab.id)}
                   disabled={tab.disabled}
-                  className={`inline-flex flex-col items-center border-b-2 px-4 py-2 text-sm font-medium transition-colors ${
+                  className={`inline-flex flex-col items-center border-b-2 px-3 py-2 text-xs sm:text-sm sm:px-4 font-medium transition-colors whitespace-nowrap ${
                     tab.disabled
                       ? 'cursor-not-allowed border-transparent text-[var(--sea-ink-soft)] opacity-50'
                       : activeTab === tab.id
