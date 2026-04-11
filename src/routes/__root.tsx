@@ -31,6 +31,46 @@ export const Route = createRootRoute({
       {
         title: 'Solana Technical Update Dashboard',
       },
+      {
+        name: 'description',
+        content: 'Track the latest Solana engineering updates — releases, pull requests, and discussions across core repositories.',
+      },
+      {
+        property: 'og:title',
+        content: 'Solana Technical Update Dashboard',
+      },
+      {
+        property: 'og:description',
+        content: 'Track the latest Solana engineering updates — releases, pull requests, and discussions across core repositories.',
+      },
+      {
+        property: 'og:image',
+        content: '/og-facebook.png',
+      },
+      {
+        property: 'og:type',
+        content: 'website',
+      },
+      {
+        property: 'og:site_name',
+        content: 'Solana Technical Update Dashboard',
+      },
+      {
+        name: 'twitter:card',
+        content: 'summary_large_image',
+      },
+      {
+        name: 'twitter:title',
+        content: 'Solana Technical Update Dashboard',
+      },
+      {
+        name: 'twitter:description',
+        content: 'Track the latest Solana engineering updates — releases, pull requests, and discussions across core repositories.',
+      },
+      {
+        name: 'twitter:image',
+        content: '/og-twitter.png',
+      },
     ],
     links: [
       {
