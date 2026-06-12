@@ -1,15 +1,12 @@
 import { useQuery } from '@tanstack/react-query'
+import repositories from '../data/repositories.json'
 import type { Repository, RepositoryWithId } from '../types/repository'
 import { getRepoId } from '../types/repository'
 
 const REPOSITORIES_KEY = 'repositories'
 
 async function fetchRepositories(): Promise<RepositoryWithId[]> {
-  const response = await fetch('/repositories.json')
-  if (!response.ok) {
-    throw new Error('Failed to fetch repositories')
-  }
-  const repos: Repository[] = await response.json()
+  const repos = repositories as Repository[]
   return repos.map((repo) => ({
     ...repo,
     id: getRepoId(repo),

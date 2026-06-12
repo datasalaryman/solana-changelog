@@ -1,0 +1,78 @@
+[
+  {
+    "owner": "solana-foundation",
+    "repository": "solana-improvement-documents"
+  },
+  {
+    "owner": "anza-xyz",
+    "repository": "agave"
+  },
+  {
+    "owner": "firedancer-io",
+    "repository": "firedancer"
+  },
+  {
+    "owner": "Overclock-Validator",
+    "repository": "mithril"
+  },
+  {
+    "owner": "anza-xyz",
+    "repository": "kit"
+  },
+  {
+    "owner": "anza-xyz",
+    "repository": "kit-plugins"
+  },
+  {
+    "owner": "anza-xyz",
+    "repository": "solana-sdk"
+  },
+  {
+    "owner": "solana-foundation",
+    "repository": "solana-go"
+  },
+  {
+    "owner": "solana-foundation",
+    "repository": "anchor"
+  },
+  {
+    "owner": "anza-xyz",
+    "repository": "pinocchio"
+  },
+  {
+    "owner": "regolith-labs",
+    "repository": "steel"
+  },
+  {
+    "owner": "joeymeere",
+    "repository": "caravel"
+  },
+  {
+    "owner": "LiteSVM",
+    "repository": "litesvm"
+  },
+  {
+    "owner": "anza-xyz",
+    "repository": "mollusk"
+  },
+  {
+    "owner": "solana-foundation",
+    "repository": "surfpool"
+  },
+  {
+    "owner": "rpcpool",
+    "repository": "yellowstone-grpc"
+  },
+  {
+    "owner": "rpcpool",
+    "repository": "yellowstone-vixen"
+  },
+  {
+    "owner": "rpcpool",
+    "repository": "yellowstone-jet"
+  },
+  {
+    "owner": "helius-labs",
+    "repository": "helius-sdk"
+  }
+]
