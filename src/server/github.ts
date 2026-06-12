@@ -7,9 +7,17 @@ import type {
   DiscussionItem
 } from '../types/github'
 import { getEnv } from '../env'
+import { GitHubServiceError, logServerError } from './errors'
 
 const GITHUB_PER_PAGE = 100 // Fetch 100 from GitHub to minimize API calls
 const UI_PAGE_SIZE = 30 // Show 30 items at a time in UI
+
+function getGitHubErrorMetadata(response: Response) {
+  return {
+    rateLimitRemaining: response.headers.get('x-ratelimit-remaining'),
+    rateLimitReset: response.headers.get('x-ratelimit-reset'),
+  }
+}
 
 function buildGitHubHeaders(userToken?: string): Record<string, string> {
   const headers: Record<string, string> = {
@@ -69,10 +77,16 @@ export async function fetchReleases(
     if (response.status === 404) {
       return { items: [], batchPage: 1, uiPage: 1, totalFetched: 0, hasMore: false }
     }
-    const rateLimit = response.headers.get('x-ratelimit-remaining')
-    const rateLimitReset = response.headers.get('x-ratelimit-reset')
-    console.error(`GitHub API error ${response.status} for ${owner}/${repository} releases. Rate limit remaining: ${rateLimit}, Resets at: ${rateLimitReset ? new Date(parseInt(rateLimitReset) * 1000).toISOString() : 'unknown'}`)
-    throw new Error(`GitHub API error ${response.status}`)
+    const metadata = getGitHubErrorMetadata(response)
+    logServerError(new Error(`GitHub API error ${response.status}`), {
+      route: 'github',
+      procedure: 'releases',
+      owner,
+      repository,
+      status: response.status,
+      metadata,
+    })
+    throw new GitHubServiceError('UPSTREAM_UNAVAILABLE', { status: response.status, metadata })
   }
 
   const pageItems: GitHubRelease[] = await response.json()
@@ -121,10 +135,16 @@ export async function fetchPullRequests(
   )
 
   if (!response.ok) {
-    const rateLimit = response.headers.get('x-ratelimit-remaining')
-    const rateLimitReset = response.headers.get('x-ratelimit-reset')
-    console.error(`GitHub API error ${response.status} for ${owner}/${repository} pull requests. Rate limit remaining: ${rateLimit}, Resets at: ${rateLimitReset ? new Date(parseInt(rateLimitReset) * 1000).toISOString() : 'unknown'}`)
-    throw new Error(`GitHub API error ${response.status}`)
+    const metadata = getGitHubErrorMetadata(response)
+    logServerError(new Error(`GitHub API error ${response.status}`), {
+      route: 'github',
+      procedure: 'pullRequests',
+      owner,
+      repository,
+      status: response.status,
+      metadata,
+    })
+    throw new GitHubServiceError('UPSTREAM_UNAVAILABLE', { status: response.status, metadata })
   }
 
   const pageItems: GitHubPullRequest[] = await response.json()
@@ -208,7 +228,7 @@ export async function fetchDiscussions(
   const headers = buildGitHubHeaders(userToken)
   
   if (!headers.Authorization) {
-    throw new Error('GitHub authentication required to fetch discussions')
+    throw new GitHubServiceError('REAUTH_REQUIRED')
   }
   
   const response = await fetch(`${baseUrl}/graphql`, {
@@ -224,7 +244,16 @@ export async function fetchDiscussions(
   })
 
   if (!response.ok) {
-    throw new Error(`GitHub API error ${response.status}`)
+    const metadata = getGitHubErrorMetadata(response)
+    logServerError(new Error(`GitHub API error ${response.status}`), {
+      route: 'github',
+      procedure: 'discussions',
+      owner,
+      repository,
+      status: response.status,
+      metadata,
+    })
+    throw new GitHubServiceError('UPSTREAM_UNAVAILABLE', { status: response.status, metadata })
   }
 
   const result: {
@@ -245,13 +274,19 @@ export async function fetchDiscussions(
   if (result.errors) {
     const errorMessages = result.errors.map((e) => e.message).join(', ')
     if (errorMessages.includes('Discussions') || errorMessages.includes('discussions')) {
-      throw new Error('Discussions are not enabled for this repository')
+      throw new GitHubServiceError('DISCUSSIONS_DISABLED')
     }
-    throw new Error(`GraphQL error: ${errorMessages}`)
+    logServerError(new Error(`GraphQL error: ${errorMessages}`), {
+      route: 'github',
+      procedure: 'discussions',
+      owner,
+      repository,
+    })
+    throw new GitHubServiceError('UPSTREAM_UNAVAILABLE')
   }
 
   if (!result.data?.repository) {
-    throw new Error('Repository not found')
+    throw new GitHubServiceError('NOT_FOUND')
   }
 
   const pageItems: GitHubDiscussion[] = result.data?.repository?.discussions?.nodes ?? []

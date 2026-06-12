@@ -19,6 +19,26 @@ export const Route = createFileRoute('/repo/$repoId')({
 
 type TabType = 'releases' | 'pullRequests' | 'discussions'
 
+function getSafeErrorMessage(error: unknown): string | null {
+  if (!error) return null
+
+  const rpcError = error as { code?: string; message?: string }
+
+  if (rpcError.code === 'DISCUSSIONS_DISABLED') {
+    return 'Discussions are not enabled for this repository.'
+  }
+
+  if (rpcError.code === 'NOT_FOUND') {
+    return 'The requested repository data was not found.'
+  }
+
+  if (rpcError.code === 'UPSTREAM_UNAVAILABLE') {
+    return 'GitHub data is temporarily unavailable. Please try again.'
+  }
+
+  return 'Something went wrong. Please try again.'
+}
+
 function RepositoryPage() {
   const { repoId } = Route.useParams()
   const { data: session, isLoading: isLoadingSession } = useSession()
@@ -135,7 +155,7 @@ function RepositoryPage() {
   }
 
   const error = getError()
-  const errorMessage = error instanceof Error ? error.message : error ? 'Failed to load' : null
+  const errorMessage = getSafeErrorMessage(error)
   const staleMessage = (activeTab === 'releases' && isReleasesStale) ||
                        (activeTab === 'pullRequests' && isPullRequestsStale)
     ? 'Showing cached data. GitHub updates could not be fetched.'

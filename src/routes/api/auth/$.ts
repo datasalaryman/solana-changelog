@@ -2,6 +2,22 @@ import { createFileRoute } from '@tanstack/react-router'
 import { json } from '@tanstack/react-start'
 import { getEnv } from '../../../env'
 import { getAuth } from '../../../lib/auth'
+import { createRequestId, getErrorDetails, getPublicErrorMessage, logServerError } from '../../../server/errors'
+
+function internalErrorResponse(error: unknown, request: Request) {
+  const requestId = createRequestId()
+  logServerError(error, {
+    requestId,
+    route: 'auth',
+    method: request.method,
+  })
+
+  return json({
+    error: getPublicErrorMessage('INTERNAL_SERVER_ERROR'),
+    requestId,
+    ...(process.env.NODE_ENV !== 'production' ? { details: getErrorDetails(error) } : {}),
+  }, { status: 500 })
+}
 
 export const Route = createFileRoute('/api/auth/$')({
   server: {
@@ -28,7 +44,7 @@ export const Route = createFileRoute('/api/auth/$')({
           
           return response
         } catch (error) {
-          return json({ error: 'Internal server error', details: error instanceof Error ? error.message : String(error) }, { status: 500 })
+          return internalErrorResponse(error, request)
         }
       },
       POST: async ({ request }) => {
@@ -47,7 +63,7 @@ export const Route = createFileRoute('/api/auth/$')({
           const response = await getAuth().handler(fullRequest)
           return response
         } catch (error) {
-          return json({ error: 'Internal server error', details: error instanceof Error ? error.message : String(error) }, { status: 500 })
+          return internalErrorResponse(error, request)
         }
       },
     },

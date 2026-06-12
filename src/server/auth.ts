@@ -2,6 +2,7 @@ import { getAuth } from '../lib/auth'
 import { getDb } from '../db'
 import { account } from '../db/schema'
 import { eq, and } from 'drizzle-orm'
+import { logServerError } from './errors'
 
 const allowedGitHubScopes = new Set(['read:user', 'user:email'])
 
@@ -47,7 +48,7 @@ export async function getUserGitHubToken(request: Request): Promise<{ token: str
 
     return { token: githubAccount.accessToken, needsReauth: false }
   } catch (error) {
-    console.error('Error getting user GitHub token:', error)
+    logServerError(error, { route: 'auth', procedure: 'getUserGitHubToken' })
     return { token: undefined as unknown as string, needsReauth: true }
   }
 }
