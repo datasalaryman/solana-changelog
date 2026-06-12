@@ -2,6 +2,7 @@
   "name": "solana-engineering-dashboard",
   "private": true,
   "type": "module",
+  "packageManager": "bun@1.3.1",
   "imports": {
     "#/*": "./src/*"
   },
@@ -63,11 +64,5 @@
     "typescript": "^5.9.3",
     "vite": "^7.3.5",
     "vite-tsconfig-paths": "^5.1.4"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "esbuild",
-      "lightningcss"
-    ]
   }
 }
