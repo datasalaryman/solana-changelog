@@ -65,6 +65,7 @@ function RepositoryPage() {
     hasNextPage: hasNextReleases,
     isFetchingNextPage: isFetchingNextReleases,
     isLoading: isLoadingReleases,
+    isStaleDueToError: isReleasesStale,
     error: releasesError 
   } = useReleases(owner, repoName, { enabled: !!session })
 
@@ -74,6 +75,7 @@ function RepositoryPage() {
     hasNextPage: hasNextPullRequests,
     isFetchingNextPage: isFetchingNextPullRequests,
     isLoading: isLoadingPRs,
+    isStaleDueToError: isPullRequestsStale,
     error: prsError 
   } = usePullRequests(owner, repoName, { enabled: !!session })
 
@@ -134,6 +136,10 @@ function RepositoryPage() {
 
   const error = getError()
   const errorMessage = error instanceof Error ? error.message : error ? 'Failed to load' : null
+  const staleMessage = (activeTab === 'releases' && isReleasesStale) ||
+                       (activeTab === 'pullRequests' && isPullRequestsStale)
+    ? 'Showing cached data. GitHub updates could not be fetched.'
+    : null
 
   return (
     <DashboardLayout>
@@ -178,6 +184,12 @@ function RepositoryPage() {
         {errorMessage && (
           <div className="mb-4 rounded-md bg-red-50 p-4 text-sm text-red-600">
             <p>{errorMessage}</p>
+          </div>
+        )}
+
+        {staleMessage && (
+          <div className="mb-4 rounded-md bg-amber-50 p-4 text-sm text-amber-700">
+            <p>{staleMessage}</p>
           </div>
         )}
 

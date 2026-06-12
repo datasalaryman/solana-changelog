@@ -1,4 +1,4 @@
-import { boolean, pgTable, text, timestamp, varchar } from "drizzle-orm/pg-core"
+import { boolean, integer, pgTable, text, timestamp, uniqueIndex, varchar } from "drizzle-orm/pg-core"
 
 export const user = pgTable("solana_changelog_user", {
   id: varchar("id", { length: 36 }).primaryKey(),
@@ -45,3 +45,59 @@ export const verification = pgTable("solana_changelog_verification", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull().$onUpdate(() => new Date()),
 })
+
+export const githubRelease = pgTable("solana_changelog_github_release", {
+  id: varchar("id", { length: 255 }).primaryKey(),
+  githubId: varchar("github_id", { length: 255 }).notNull(),
+  owner: varchar("owner", { length: 255 }).notNull(),
+  repository: varchar("repository", { length: 255 }).notNull(),
+  tagName: text("tag_name").notNull(),
+  name: text("name"),
+  description: text("description"),
+  url: text("url").notNull(),
+  createdAt: timestamp("created_at").notNull(),
+  publishedAt: timestamp("published_at"),
+  fetchedAt: timestamp("fetched_at").defaultNow().notNull(),
+  lastSeenAt: timestamp("last_seen_at").defaultNow().notNull(),
+}, (table) => [
+  uniqueIndex("github_release_repo_github_id_idx").on(table.owner, table.repository, table.githubId),
+])
+
+export const githubPullRequest = pgTable("solana_changelog_github_pull_request", {
+  id: varchar("id", { length: 255 }).primaryKey(),
+  githubId: varchar("github_id", { length: 255 }).notNull(),
+  owner: varchar("owner", { length: 255 }).notNull(),
+  repository: varchar("repository", { length: 255 }).notNull(),
+  number: integer("number").notNull(),
+  title: text("title").notNull(),
+  state: varchar("state", { length: 32 }).notNull(),
+  mergedAt: timestamp("merged_at"),
+  authorLogin: varchar("author_login", { length: 255 }).notNull(),
+  url: text("url").notNull(),
+  createdAt: timestamp("created_at").notNull(),
+  updatedAt: timestamp("updated_at").notNull(),
+  closedAt: timestamp("closed_at"),
+  fetchedAt: timestamp("fetched_at").defaultNow().notNull(),
+  lastSeenAt: timestamp("last_seen_at").defaultNow().notNull(),
+}, (table) => [
+  uniqueIndex("github_pull_request_repo_github_id_idx").on(table.owner, table.repository, table.githubId),
+])
+
+export const githubDiscussion = pgTable("solana_changelog_github_discussion", {
+  id: varchar("id", { length: 255 }).primaryKey(),
+  githubId: varchar("github_id", { length: 255 }).notNull(),
+  owner: varchar("owner", { length: 255 }).notNull(),
+  repository: varchar("repository", { length: 255 }).notNull(),
+  number: integer("number").notNull(),
+  title: text("title").notNull(),
+  categoryName: varchar("category_name", { length: 255 }),
+  authorLogin: varchar("author_login", { length: 255 }),
+  answerChosenAt: timestamp("answer_chosen_at"),
+  url: text("url").notNull(),
+  createdAt: timestamp("created_at").notNull(),
+  updatedAt: timestamp("updated_at").notNull(),
+  fetchedAt: timestamp("fetched_at").defaultNow().notNull(),
+  lastSeenAt: timestamp("last_seen_at").defaultNow().notNull(),
+}, (table) => [
+  uniqueIndex("github_discussion_repo_github_id_idx").on(table.owner, table.repository, table.githubId),
+])

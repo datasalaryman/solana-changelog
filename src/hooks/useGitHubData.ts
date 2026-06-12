@@ -18,6 +18,8 @@ interface UseInfiniteDataResult<T> {
   hasNextPage: boolean
   isFetchingNextPage: boolean
   isLoading: boolean
+  isRefreshing: boolean
+  isStaleDueToError: boolean
   error: Error | null
 }
 
@@ -25,6 +27,22 @@ function calculatePagination(pageNum: number): { batchPage: number; uiPage: numb
   const batchPage = Math.ceil(pageNum / UI_PAGES_PER_BATCH)
   const uiPage = ((pageNum - 1) % UI_PAGES_PER_BATCH) + 1
   return { batchPage, uiPage }
+}
+
+function mergeItems<T extends { id: string; originalDate: string }>(cachedItems: T[], freshItems: T[]): T[] {
+  const merged = new Map<string, T>()
+
+  for (const item of cachedItems) {
+    merged.set(item.id, item)
+  }
+
+  for (const item of freshItems) {
+    merged.set(item.id, item)
+  }
+
+  return Array.from(merged.values()).sort(
+    (a, b) => new Date(b.originalDate).getTime() - new Date(a.originalDate).getTime()
+  )
 }
 
 class ReauthRequiredError extends Error {
@@ -83,15 +101,25 @@ export function useReleases(
 ): UseInfiniteDataResult<ReleaseItem> {
   const repoId = `${owner}/${repository}`
 
-  const {
-    data,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-    isLoading,
-    error,
-  } = useInfiniteQuery<PaginatedBatchResult<ReleaseItem>>({
-    queryKey: [GITHUB_KEY, 'releases', owner, repository],
+  const cachedQuery = useInfiniteQuery<PaginatedBatchResult<ReleaseItem>>({
+    queryKey: [GITHUB_KEY, 'db', 'releases', owner, repository],
+    queryFn: async ({ pageParam = 1 }) => {
+      const { batchPage, uiPage } = calculatePagination(pageParam as number)
+      return orpc.github.cachedReleases({ owner, repository, batchPage, uiPage })
+    },
+    getNextPageParam: (lastPage, allPages) => {
+      if (lastPage.hasMore) {
+        return allPages.length + 1
+      }
+      return undefined
+    },
+    staleTime: 5 * 60 * 1000,
+    enabled: !!owner && !!repository && options?.enabled !== false,
+    initialPageParam: 1,
+  })
+
+  const freshQuery = useInfiniteQuery<PaginatedBatchResult<ReleaseItem>>({
+    queryKey: [GITHUB_KEY, 'fresh', 'releases', owner, repository],
     queryFn: async ({ pageParam = 1 }) => {
       const { batchPage, uiPage } = calculatePagination(pageParam as number)
       const key = `releases:${repoId}:${batchPage}:${uiPage}`
@@ -115,19 +143,26 @@ export function useReleases(
   })
 
   // Check for reauth error after query completes
-  if (error instanceof ReauthRequiredError) {
+  if (freshQuery.error instanceof ReauthRequiredError) {
     handleReauthError()
   }
 
-  const allItems = data?.pages.flatMap((page) => page.items) ?? []
+  const cachedItems = cachedQuery.data?.pages.flatMap((page) => page.items) ?? []
+  const freshItems = freshQuery.data?.pages.flatMap((page) => page.items) ?? []
+  const allItems = mergeItems(cachedItems, freshItems)
 
   return {
     data: allItems,
-    fetchNextPage,
-    hasNextPage: hasNextPage ?? false,
-    isFetchingNextPage,
-    isLoading,
-    error: error as Error | null,
+    fetchNextPage: () => {
+      if (cachedQuery.hasNextPage) cachedQuery.fetchNextPage()
+      if (freshQuery.hasNextPage) freshQuery.fetchNextPage()
+    },
+    hasNextPage: (cachedQuery.hasNextPage ?? false) || (freshQuery.hasNextPage ?? false),
+    isFetchingNextPage: cachedQuery.isFetchingNextPage || freshQuery.isFetchingNextPage,
+    isLoading: allItems.length === 0 && (cachedQuery.isLoading || freshQuery.isFetching),
+    isRefreshing: freshQuery.isFetching,
+    isStaleDueToError: !!freshQuery.error && cachedItems.length > 0,
+    error: allItems.length === 0 ? ((cachedQuery.error ?? freshQuery.error) as Error | null) : null,
   }
 }
 
@@ -138,15 +173,25 @@ export function usePullRequests(
 ): UseInfiniteDataResult<PullRequestItem> {
   const repoId = `${owner}/${repository}`
 
-  const {
-    data,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-    isLoading,
-    error,
-  } = useInfiniteQuery<PaginatedBatchResult<PullRequestItem>>({
-    queryKey: [GITHUB_KEY, 'pullRequests', owner, repository],
+  const cachedQuery = useInfiniteQuery<PaginatedBatchResult<PullRequestItem>>({
+    queryKey: [GITHUB_KEY, 'db', 'pullRequests', owner, repository],
+    queryFn: async ({ pageParam = 1 }) => {
+      const { batchPage, uiPage } = calculatePagination(pageParam as number)
+      return orpc.github.cachedPullRequests({ owner, repository, batchPage, uiPage })
+    },
+    getNextPageParam: (lastPage, allPages) => {
+      if (lastPage.hasMore) {
+        return allPages.length + 1
+      }
+      return undefined
+    },
+    staleTime: 5 * 60 * 1000,
+    enabled: !!owner && !!repository && options?.enabled !== false,
+    initialPageParam: 1,
+  })
+
+  const freshQuery = useInfiniteQuery<PaginatedBatchResult<PullRequestItem>>({
+    queryKey: [GITHUB_KEY, 'fresh', 'pullRequests', owner, repository],
     queryFn: async ({ pageParam = 1 }) => {
       const { batchPage, uiPage } = calculatePagination(pageParam as number)
       const key = `pull-requests:${repoId}:${batchPage}:${uiPage}`
@@ -170,19 +215,26 @@ export function usePullRequests(
   })
 
   // Check for reauth error after query completes
-  if (error instanceof ReauthRequiredError) {
+  if (freshQuery.error instanceof ReauthRequiredError) {
     handleReauthError()
   }
 
-  const allItems = data?.pages.flatMap((page) => page.items) ?? []
+  const cachedItems = cachedQuery.data?.pages.flatMap((page) => page.items) ?? []
+  const freshItems = freshQuery.data?.pages.flatMap((page) => page.items) ?? []
+  const allItems = mergeItems(cachedItems, freshItems)
 
   return {
     data: allItems,
-    fetchNextPage,
-    hasNextPage: hasNextPage ?? false,
-    isFetchingNextPage,
-    isLoading,
-    error: error as Error | null,
+    fetchNextPage: () => {
+      if (cachedQuery.hasNextPage) cachedQuery.fetchNextPage()
+      if (freshQuery.hasNextPage) freshQuery.fetchNextPage()
+    },
+    hasNextPage: (cachedQuery.hasNextPage ?? false) || (freshQuery.hasNextPage ?? false),
+    isFetchingNextPage: cachedQuery.isFetchingNextPage || freshQuery.isFetchingNextPage,
+    isLoading: allItems.length === 0 && (cachedQuery.isLoading || freshQuery.isFetching),
+    isRefreshing: freshQuery.isFetching,
+    isStaleDueToError: !!freshQuery.error && cachedItems.length > 0,
+    error: allItems.length === 0 ? ((cachedQuery.error ?? freshQuery.error) as Error | null) : null,
   }
 }
 
@@ -193,15 +245,24 @@ export function useDiscussions(
 ): UseInfiniteDataResult<DiscussionItem> {
   const repoId = `${owner}/${repository}`
 
-  const {
-    data,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-    isLoading,
-    error,
-  } = useInfiniteQuery<PaginatedBatchResult<DiscussionItem>>({
-    queryKey: [GITHUB_KEY, 'discussions', owner, repository],
+  const cachedQuery = useInfiniteQuery<PaginatedBatchResult<DiscussionItem>>({
+    queryKey: [GITHUB_KEY, 'db', 'discussions', owner, repository],
+    queryFn: async ({ pageParam = 1 }) => {
+      return orpc.github.cachedDiscussions({ owner, repository, cursor: null, uiPage: pageParam as number })
+    },
+    getNextPageParam: (lastPage, allPages) => {
+      if (lastPage.hasMore) {
+        return allPages.length + 1
+      }
+      return undefined
+    },
+    staleTime: 5 * 60 * 1000,
+    enabled: !!owner && !!repository && options?.enabled !== false,
+    initialPageParam: 1,
+  })
+
+  const freshQuery = useInfiniteQuery<PaginatedBatchResult<DiscussionItem>>({
+    queryKey: [GITHUB_KEY, 'fresh', 'discussions', owner, repository],
     queryFn: async ({ pageParam }) => {
       const params = (pageParam as { cursor: string | null; uiPage: number }) || { cursor: null, uiPage: 1 }
       const key = `discussions:${repoId}:${params.cursor ?? ''}:${params.uiPage}`
@@ -244,19 +305,26 @@ export function useDiscussions(
   })
 
   // Check for reauth error after query completes
-  if (error instanceof ReauthRequiredError) {
+  if (freshQuery.error instanceof ReauthRequiredError) {
     handleReauthError()
   }
 
-  const allItems = data?.pages.flatMap((page) => page.items) ?? []
+  const cachedItems = cachedQuery.data?.pages.flatMap((page) => page.items) ?? []
+  const freshItems = freshQuery.data?.pages.flatMap((page) => page.items) ?? []
+  const allItems = mergeItems(cachedItems, freshItems)
 
   return {
     data: allItems,
-    fetchNextPage,
-    hasNextPage: hasNextPage ?? false,
-    isFetchingNextPage,
-    isLoading,
-    error: error as Error | null,
+    fetchNextPage: () => {
+      if (cachedQuery.hasNextPage) cachedQuery.fetchNextPage()
+      if (freshQuery.hasNextPage) freshQuery.fetchNextPage()
+    },
+    hasNextPage: (cachedQuery.hasNextPage ?? false) || (freshQuery.hasNextPage ?? false),
+    isFetchingNextPage: cachedQuery.isFetchingNextPage || freshQuery.isFetchingNextPage,
+    isLoading: allItems.length === 0 && (cachedQuery.isLoading || freshQuery.isFetching),
+    isRefreshing: freshQuery.isFetching,
+    isStaleDueToError: !!freshQuery.error && cachedItems.length > 0,
+    error: allItems.length === 0 ? ((cachedQuery.error ?? freshQuery.error) as Error | null) : null,
   }
 }
 

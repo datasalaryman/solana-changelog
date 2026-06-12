@@ -24,7 +24,7 @@ function buildGitHubHeaders(userToken?: string): Record<string, string> {
   return headers
 }
 
-function formatRelativeDate(dateString: string): string {
+export function formatRelativeDate(dateString: string): string {
   const date = new Date(dateString)
   const now = new Date()
   const diffMs = now.getTime() - date.getTime()
