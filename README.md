@@ -30,6 +30,10 @@ Run tests:
 bun --bun run test
 ```
 
+## Security
+
+GitHub OAuth is used for sign-in identity and authenticated public API rate limits only. The app requests `read:user` and `user:email`; it does not request repository access through the broad classic `repo` scope. Existing sessions with broader stored GitHub scopes are required to re-authenticate so future tokens use the reduced grant.
+
 ## Contributing
 
 Contributors can help by improving the dashboard experience, adding or refining update sources, organizing technical categories, and making it easier to explore ongoing Solana engineering work.

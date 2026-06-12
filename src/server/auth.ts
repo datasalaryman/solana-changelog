@@ -3,6 +3,8 @@ import { db } from '../db'
 import { account } from '../db/schema'
 import { eq, and } from 'drizzle-orm'
 
+const allowedGitHubScopes = new Set(['read:user', 'user:email'])
+
 export async function getUserGitHubToken(request: Request): Promise<{ token: string; needsReauth: boolean }> {
   try {
     const session = await auth.api.getSession({
@@ -26,6 +28,11 @@ export async function getUserGitHubToken(request: Request): Promise<{ token: str
     }
 
     const githubAccount = accounts[0]
+
+    // Force re-auth for old GitHub grants that include broader repository scopes.
+    if (githubAccount.scope?.split(/[\s,]+/).filter(Boolean).some((value) => !allowedGitHubScopes.has(value))) {
+      return { token: undefined as unknown as string, needsReauth: true }
+    }
 
     if (!githubAccount.accessToken) {
       return { token: undefined as unknown as string, needsReauth: true }
