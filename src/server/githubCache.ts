@@ -1,5 +1,5 @@
 import { and, desc, eq, sql } from 'drizzle-orm'
-import { db } from '../db'
+import { getDb } from '../db'
 import { githubDiscussion, githubPullRequest, githubRelease } from '../db/schema'
 import type { DiscussionItem, PullRequestItem, ReleaseItem } from '../types/github'
 import type { PaginatedBatchResult } from './github'
@@ -72,6 +72,7 @@ function discussionRowToItem(row: typeof githubDiscussion.$inferSelect): Discuss
 }
 
 export async function getCachedReleases(owner: string, repository: string, batchPage: number, uiPage: number): Promise<PaginatedBatchResult<ReleaseItem>> {
+  const db = getDb()
   const offset = getOffset(batchPage, uiPage)
   const rows = await db
     .select()
@@ -91,6 +92,7 @@ export async function getCachedReleases(owner: string, repository: string, batch
 }
 
 export async function getCachedPullRequests(owner: string, repository: string, batchPage: number, uiPage: number): Promise<PaginatedBatchResult<PullRequestItem>> {
+  const db = getDb()
   const offset = getOffset(batchPage, uiPage)
   const rows = await db
     .select()
@@ -110,6 +112,7 @@ export async function getCachedPullRequests(owner: string, repository: string, b
 }
 
 export async function getCachedDiscussions(owner: string, repository: string, batchPage: number, uiPage: number): Promise<PaginatedBatchResult<DiscussionItem>> {
+  const db = getDb()
   const offset = getOffset(batchPage, uiPage)
   const rows = await db
     .select()
@@ -131,6 +134,7 @@ export async function getCachedDiscussions(owner: string, repository: string, ba
 export async function upsertReleases(owner: string, repository: string, items: ReleaseItem[]) {
   if (items.length === 0) return
 
+  const db = getDb()
   const now = new Date()
   await db.insert(githubRelease).values(items.map((item) => ({
     id: `${owner}/${repository}/release/${item.id}`,
@@ -163,6 +167,7 @@ export async function upsertReleases(owner: string, repository: string, items: R
 export async function upsertPullRequests(owner: string, repository: string, items: PullRequestItem[]) {
   if (items.length === 0) return
 
+  const db = getDb()
   const now = new Date()
   await db.insert(githubPullRequest).values(items.map((item) => {
     const numberMatch = item.subtitle.match(/^#(\d+)/)
@@ -206,6 +211,7 @@ export async function upsertPullRequests(owner: string, repository: string, item
 export async function upsertDiscussions(owner: string, repository: string, items: DiscussionItem[]) {
   if (items.length === 0) return
 
+  const db = getDb()
   const now = new Date()
   await db.insert(githubDiscussion).values(items.map((item) => {
     const authorMatch = item.subtitle.match(/Started by @(.+)$/)

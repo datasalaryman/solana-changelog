@@ -8,6 +8,11 @@ import tailwindcss from '@tailwindcss/vite'
 import { nitro } from 'nitro/vite'
 
 const config = defineConfig(async ({ command }) => {
+  if (command === 'build') {
+    const { getEnv } = await import('./src/env')
+    getEnv()
+  }
+
   const plugins: PluginOption[] = [
     tsconfigPaths({ projects: ['./tsconfig.json'] }),
     tailwindcss(),

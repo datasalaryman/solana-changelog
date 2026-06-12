@@ -1,5 +1,5 @@
-import { auth } from '../lib/auth'
-import { db } from '../db'
+import { getAuth } from '../lib/auth'
+import { getDb } from '../db'
 import { account } from '../db/schema'
 import { eq, and } from 'drizzle-orm'
 
@@ -7,7 +7,7 @@ const allowedGitHubScopes = new Set(['read:user', 'user:email'])
 
 export async function getUserGitHubToken(request: Request): Promise<{ token: string; needsReauth: boolean }> {
   try {
-    const session = await auth.api.getSession({
+    const session = await getAuth().api.getSession({
       headers: request.headers,
     })
 
@@ -15,7 +15,7 @@ export async function getUserGitHubToken(request: Request): Promise<{ token: str
       return { token: undefined as unknown as string, needsReauth: true }
     }
 
-    const accounts = await db
+    const accounts = await getDb()
       .select()
       .from(account)
       .where(and(

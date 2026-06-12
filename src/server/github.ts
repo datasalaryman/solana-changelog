@@ -6,8 +6,8 @@ import type {
   PullRequestItem,
   DiscussionItem
 } from '../types/github'
+import { getEnv } from '../env'
 
-const BASE_URL = process.env.GITHUB_BASE_URL || 'https://api.github.com'
 const GITHUB_PER_PAGE = 100 // Fetch 100 from GitHub to minimize API calls
 const UI_PAGE_SIZE = 30 // Show 30 items at a time in UI
 
@@ -57,10 +57,11 @@ export async function fetchReleases(
   uiPage: number = 1,
   userToken?: string
 ): Promise<PaginatedBatchResult<ReleaseItem>> {
+  const baseUrl = getEnv().GITHUB_BASE_URL
   const headers = buildGitHubHeaders(userToken)
   
   const response = await fetch(
-    `${BASE_URL}/repos/${owner}/${repository}/releases?per_page=${GITHUB_PER_PAGE}&page=${batchPage}`,
+    `${baseUrl}/repos/${owner}/${repository}/releases?per_page=${GITHUB_PER_PAGE}&page=${batchPage}`,
     { headers }
   )
 
@@ -111,10 +112,11 @@ export async function fetchPullRequests(
   uiPage: number = 1,
   userToken?: string
 ): Promise<PaginatedBatchResult<PullRequestItem>> {
+  const baseUrl = getEnv().GITHUB_BASE_URL
   const headers = buildGitHubHeaders(userToken)
   
   const response = await fetch(
-    `${BASE_URL}/repos/${owner}/${repository}/pulls?state=all&sort=updated&direction=desc&per_page=${GITHUB_PER_PAGE}&page=${batchPage}`,
+    `${baseUrl}/repos/${owner}/${repository}/pulls?state=all&sort=updated&direction=desc&per_page=${GITHUB_PER_PAGE}&page=${batchPage}`,
     { headers }
   )
 
@@ -202,13 +204,14 @@ export async function fetchDiscussions(
   uiPage: number = 1,
   userToken?: string
 ): Promise<PaginatedBatchResult<DiscussionItem>> {
+  const baseUrl = getEnv().GITHUB_BASE_URL
   const headers = buildGitHubHeaders(userToken)
   
   if (!headers.Authorization) {
     throw new Error('GitHub authentication required to fetch discussions')
   }
   
-  const response = await fetch(`${BASE_URL}/graphql`, {
+  const response = await fetch(`${baseUrl}/graphql`, {
     method: 'POST',
     headers: {
       ...headers,

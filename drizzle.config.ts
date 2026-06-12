@@ -1,12 +1,7 @@
 import { defineConfig } from "drizzle-kit"
+import { getEnv } from "./src/env"
 
-const databaseUrl = process.env.DATABASE_URL
-
-if (!databaseUrl) {
-  throw new Error("DATABASE_URL environment variable is required")
-}
-
-const parsedDatabaseUrl = new URL(databaseUrl)
+const parsedDatabaseUrl = new URL(getEnv().DATABASE_URL)
 
 export default defineConfig({
   schema: "./src/db/schema.ts",
