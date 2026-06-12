@@ -1,5 +1,4 @@
-import { defineConfig } from 'vite'
-import { devtools } from '@tanstack/devtools-vite'
+import { defineConfig, type PluginOption } from 'vite'
 import tsconfigPaths from 'vite-tsconfig-paths'
 
 import { tanstackStart } from '@tanstack/react-start/plugin/vite'
@@ -8,9 +7,8 @@ import viteReact from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { nitro } from 'nitro/vite'
 
-const config = defineConfig({
-  plugins: [
-    devtools(),
+const config = defineConfig(async ({ command }) => {
+  const plugins: PluginOption[] = [
     tsconfigPaths({ projects: ['./tsconfig.json'] }),
     tailwindcss(),
     tanstackStart(),
@@ -18,7 +16,14 @@ const config = defineConfig({
       preset: 'vercel',
     }),
     viteReact(),
-  ],
+  ]
+
+  if (command === 'serve') {
+    const { devtools } = await import('@tanstack/devtools-vite')
+    plugins.unshift(devtools())
+  }
+
+  return { plugins }
 })
 
 export default config
