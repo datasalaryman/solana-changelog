@@ -1,21 +1,24 @@
-import { Client } from '@planetscale/database'
-import { drizzle } from 'drizzle-orm/planetscale-serverless'
+import { drizzle } from "drizzle-orm/node-postgres"
+import { Pool } from "pg"
 import * as schema from "./schema"
 
-const host = process.env.DATABASE_HOST
-const username = process.env.DATABASE_USERNAME
-const password = process.env.DATABASE_PASSWORD
+const connectionString = process.env.DATABASE_URL
 
-if (!host || !username || !password) {
-  throw new Error(
-    "DATABASE_HOST, DATABASE_USERNAME, and DATABASE_PASSWORD environment variables are required"
-  )
+if (!connectionString) {
+  throw new Error("DATABASE_URL environment variable is required")
 }
 
-const client = new Client({
-  host,
-  username,
-  password,
+const parsedConnectionString = new URL(connectionString)
+
+const pool = new Pool({
+  host: parsedConnectionString.hostname,
+  port: parsedConnectionString.port ? Number(parsedConnectionString.port) : 5432,
+  user: decodeURIComponent(parsedConnectionString.username),
+  password: decodeURIComponent(parsedConnectionString.password),
+  database: parsedConnectionString.pathname.replace(/^\//, ""),
+  ssl: {
+    rejectUnauthorized: true,
+  },
 })
 
-export const db = drizzle(client, { schema })
+export const db = drizzle(pool, { schema })

@@ -1,16 +1,16 @@
-import { mysqlTable, varchar, timestamp, text, boolean } from "drizzle-orm/mysql-core"
+import { boolean, pgTable, text, timestamp, varchar } from "drizzle-orm/pg-core"
 
-export const user = mysqlTable("user", {
+export const user = pgTable("solana_changelog_user", {
   id: varchar("id", { length: 36 }).primaryKey(),
-  name: text("name"),
+  name: text("name").notNull(),
   email: varchar("email", { length: 255 }).notNull().unique(),
-  emailVerified: boolean("email_verified").default(false),
+  emailVerified: boolean("email_verified").default(false).notNull(),
   image: text("image"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull().onUpdateNow(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull().$onUpdate(() => new Date()),
 })
 
-export const session = mysqlTable("session", {
+export const session = pgTable("solana_changelog_session", {
   id: varchar("id", { length: 36 }).primaryKey(),
   userId: varchar("user_id", { length: 36 }).notNull(),
   token: varchar("token", { length: 255 }).notNull().unique(),
@@ -18,10 +18,10 @@ export const session = mysqlTable("session", {
   ipAddress: text("ip_address"),
   userAgent: text("user_agent"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull().onUpdateNow(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull().$onUpdate(() => new Date()),
 })
 
-export const account = mysqlTable("account", {
+export const account = pgTable("solana_changelog_account", {
   id: varchar("id", { length: 36 }).primaryKey(),
   userId: varchar("user_id", { length: 36 }).notNull(),
   accountId: varchar("account_id", { length: 255 }).notNull(),
@@ -34,14 +34,14 @@ export const account = mysqlTable("account", {
   idToken: text("id_token"),
   password: text("password"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull().onUpdateNow(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull().$onUpdate(() => new Date()),
 })
 
-export const verification = mysqlTable("verification", {
+export const verification = pgTable("solana_changelog_verification", {
   id: varchar("id", { length: 36 }).primaryKey(),
   identifier: varchar("identifier", { length: 255 }).notNull(),
-  value: varchar("value", { length: 255 }).notNull(),
+  value: text("value").notNull(),
   expiresAt: timestamp("expires_at").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull().onUpdateNow(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull().$onUpdate(() => new Date()),
 })

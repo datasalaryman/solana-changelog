@@ -1,8 +1,10 @@
+import { safe } from '@orpc/client'
 import { useInfiniteQuery, QueryClient } from '@tanstack/react-query'
 import { redirect } from '@tanstack/react-router'
 import type { ReleaseItem, PullRequestItem, DiscussionItem } from '../types/github'
 import type { PaginatedBatchResult } from '../server/github'
 import { githubRequestQueue } from '../lib/requestQueue'
+import { orpc } from '../lib/orpc'
 import { queryClient } from '../routes/__root'
 
 const GITHUB_KEY = 'github'
@@ -45,24 +47,24 @@ function handleReauthError(): never {
   })
 }
 
-async function handleApiResponse<T>(response: Response): Promise<T> {
-  if (!response.ok) {
-    const err = await response.json()
-    if (err.code === 'REAUTH_REQUIRED') {
-      throw new ReauthRequiredError(err.error || 'Reauthorization required')
-    }
-    throw new Error(err.error || 'API request failed')
-  }
-  return response.json()
-}
-
-async function queueFetch<T>(url: string, priority: 'high' | 'low' = 'low'): Promise<T> {
+async function queueCall<T>(key: string, call: () => Promise<T>, priority: 'high' | 'low' = 'low'): Promise<T> {
   try {
     return await githubRequestQueue.add(
-      url,
+      key,
       async () => {
-        const response = await fetch(url, { credentials: 'include' })
-        return handleApiResponse<T>(response)
+        const [error, data] = await safe(call())
+
+        if (error) {
+          const rpcError = error as { code?: string; message?: string }
+
+          if (rpcError.code === 'REAUTH_REQUIRED') {
+            throw new ReauthRequiredError(rpcError.message || 'Reauthorization required')
+          }
+
+          throw error
+        }
+
+        return data
       },
       priority
     )
@@ -92,8 +94,8 @@ export function useReleases(
     queryKey: [GITHUB_KEY, 'releases', owner, repository],
     queryFn: async ({ pageParam = 1 }) => {
       const { batchPage, uiPage } = calculatePagination(pageParam as number)
-      const url = `/api/github/${encodeURIComponent(repoId)}/releases?batchPage=${batchPage}&uiPage=${uiPage}`
-      return queueFetch<PaginatedBatchResult<ReleaseItem>>(url, 'high')
+      const key = `releases:${repoId}:${batchPage}:${uiPage}`
+      return queueCall(key, () => orpc.github.releases({ owner, repository, batchPage, uiPage }), 'high')
     },
     getNextPageParam: (lastPage, allPages) => {
       if (lastPage.hasMore) {
@@ -147,8 +149,8 @@ export function usePullRequests(
     queryKey: [GITHUB_KEY, 'pullRequests', owner, repository],
     queryFn: async ({ pageParam = 1 }) => {
       const { batchPage, uiPage } = calculatePagination(pageParam as number)
-      const url = `/api/github/${encodeURIComponent(repoId)}/pull-requests?batchPage=${batchPage}&uiPage=${uiPage}`
-      return queueFetch<PaginatedBatchResult<PullRequestItem>>(url, 'high')
+      const key = `pull-requests:${repoId}:${batchPage}:${uiPage}`
+      return queueCall(key, () => orpc.github.pullRequests({ owner, repository, batchPage, uiPage }), 'high')
     },
     getNextPageParam: (lastPage, allPages) => {
       if (lastPage.hasMore) {
@@ -202,9 +204,12 @@ export function useDiscussions(
     queryKey: [GITHUB_KEY, 'discussions', owner, repository],
     queryFn: async ({ pageParam }) => {
       const params = (pageParam as { cursor: string | null; uiPage: number }) || { cursor: null, uiPage: 1 }
-      const cursorParam = params.cursor ? `&cursor=${encodeURIComponent(params.cursor)}` : ''
-      const url = `/api/github/${encodeURIComponent(repoId)}/discussions?uiPage=${params.uiPage}${cursorParam}`
-      return queueFetch<PaginatedBatchResult<DiscussionItem>>(url, 'high')
+      const key = `discussions:${repoId}:${params.cursor ?? ''}:${params.uiPage}`
+      return queueCall(
+        key,
+        () => orpc.github.discussions({ owner, repository, cursor: params.cursor, uiPage: params.uiPage }),
+        'high'
+      )
     },
     getNextPageParam: (lastPage, allPages) => {
       const currentParams = allPages.length > 0 
@@ -264,10 +269,14 @@ export function createPrefetchFunctions(queryClient: QueryClient) {
         await Promise.all([
           (async () => {
             const { batchPage, uiPage } = calculatePagination(1)
-            const url = `/api/github/${encodeURIComponent(repoId)}/releases?batchPage=${batchPage}&uiPage=${uiPage}`
+            const key = `releases:${repoId}:${batchPage}:${uiPage}`
 
             // Always add to queue to allow priority upgrades
-            const data = await queueFetch<PaginatedBatchResult<ReleaseItem>>(url, priority)
+            const data = await queueCall(
+              key,
+              () => orpc.github.releases({ owner, repository, batchPage, uiPage }),
+              priority
+            )
 
             // Update TanStack Query cache with the result
             queryClient.setQueryData(
@@ -288,10 +297,14 @@ export function createPrefetchFunctions(queryClient: QueryClient) {
           })(),
           (async () => {
             const { batchPage, uiPage } = calculatePagination(1)
-            const url = `/api/github/${encodeURIComponent(repoId)}/pull-requests?batchPage=${batchPage}&uiPage=${uiPage}`
+            const key = `pull-requests:${repoId}:${batchPage}:${uiPage}`
 
             // Always add to queue to allow priority upgrades
-            const data = await queueFetch<PaginatedBatchResult<PullRequestItem>>(url, priority)
+            const data = await queueCall(
+              key,
+              () => orpc.github.pullRequests({ owner, repository, batchPage, uiPage }),
+              priority
+            )
 
             // Update TanStack Query cache with the result
             queryClient.setQueryData(

@@ -9,7 +9,7 @@ export const auth = betterAuth({
   baseURL: process.env.BETTER_AUTH_URL || (isSecure ? undefined : "http://localhost:3000"),
   basePath: "/api/auth",
   database: drizzleAdapter(db, {
-    provider: "mysql",
+    provider: "pg",
   }),
   session: {
     expiresIn: 60 * 5,
