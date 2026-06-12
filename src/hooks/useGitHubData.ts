@@ -1,5 +1,5 @@
 import { safe } from '@orpc/client'
-import { useInfiniteQuery, QueryClient } from '@tanstack/react-query'
+import { useInfiniteQuery } from '@tanstack/react-query'
 import { redirect } from '@tanstack/react-router'
 import type { ReleaseItem, PullRequestItem, DiscussionItem } from '../types/github'
 import type { PaginatedBatchResult } from '../server/github'
@@ -257,80 +257,6 @@ export function useDiscussions(
     isFetchingNextPage,
     isLoading,
     error: error as Error | null,
-  }
-}
-
-export function createPrefetchFunctions(queryClient: QueryClient) {
-  return {
-    prefetchRepoData: async (owner: string, repository: string, priority: 'high' | 'low' = 'low'): Promise<void> => {
-      const repoId = `${owner}/${repository}`
-
-      try {
-        await Promise.all([
-          (async () => {
-            const { batchPage, uiPage } = calculatePagination(1)
-            const key = `releases:${repoId}:${batchPage}:${uiPage}`
-
-            // Always add to queue to allow priority upgrades
-            const data = await queueCall(
-              key,
-              () => orpc.github.releases({ owner, repository, batchPage, uiPage }),
-              priority
-            )
-
-            // Update TanStack Query cache with the result
-            queryClient.setQueryData(
-              [GITHUB_KEY, 'releases', owner, repository],
-              (oldData: { pages: PaginatedBatchResult<ReleaseItem>[]; pageParams: number[] } | undefined) => {
-                if (oldData) {
-                  return {
-                    ...oldData,
-                    pages: [data, ...oldData.pages.slice(1)],
-                  }
-                }
-                return {
-                  pages: [data],
-                  pageParams: [1],
-                }
-              }
-            )
-          })(),
-          (async () => {
-            const { batchPage, uiPage } = calculatePagination(1)
-            const key = `pull-requests:${repoId}:${batchPage}:${uiPage}`
-
-            // Always add to queue to allow priority upgrades
-            const data = await queueCall(
-              key,
-              () => orpc.github.pullRequests({ owner, repository, batchPage, uiPage }),
-              priority
-            )
-
-            // Update TanStack Query cache with the result
-            queryClient.setQueryData(
-              [GITHUB_KEY, 'pullRequests', owner, repository],
-              (oldData: { pages: PaginatedBatchResult<PullRequestItem>[]; pageParams: number[] } | undefined) => {
-                if (oldData) {
-                  return {
-                    ...oldData,
-                    pages: [data, ...oldData.pages.slice(1)],
-                  }
-                }
-                return {
-                  pages: [data],
-                  pageParams: [1],
-                }
-              }
-            )
-          })(),
-        ])
-      } catch (error) {
-        if (error instanceof ReauthRequiredError) {
-          handleReauthError()
-        }
-        throw error
-      }
-    },
   }
 }
 

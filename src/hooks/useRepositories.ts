@@ -16,11 +16,15 @@ async function fetchRepositories(): Promise<RepositoryWithId[]> {
   }))
 }
 
+export const repositoriesQueryOptions = {
+  queryKey: [REPOSITORIES_KEY],
+  queryFn: fetchRepositories,
+  staleTime: 5 * 60 * 1000,
+}
+
 export function useRepositories(options?: { enabled?: boolean }) {
   return useQuery({
-    queryKey: [REPOSITORIES_KEY],
-    queryFn: fetchRepositories,
-    staleTime: 5 * 60 * 1000,
+    ...repositoriesQueryOptions,
     enabled: options?.enabled !== false,
   })
 }
