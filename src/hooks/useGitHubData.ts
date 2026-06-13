@@ -1,11 +1,10 @@
 import { safe } from '@orpc/client'
 import { useInfiniteQuery } from '@tanstack/react-query'
-import { redirect } from '@tanstack/react-router'
 import type { ReleaseItem, PullRequestItem, DiscussionItem } from '../types/github'
 import type { PaginatedBatchResult } from '../server/github'
 import { githubRequestQueue } from '../lib/requestQueue'
 import { orpc } from '../lib/orpc'
-import { queryClient } from '../routes/__root'
+import { startReauth } from '../lib/reauth'
 
 const GITHUB_KEY = 'github'
 const UI_PAGE_SIZE = 30
@@ -52,19 +51,6 @@ class ReauthRequiredError extends Error {
   }
 }
 
-// Global handler for reauth errors - clears credentials and redirects
-function handleReauthError(): never {
-  // Clear all queries from cache
-  queryClient.clear()
-  // Throw redirect to login page
-  throw redirect({
-    to: '/login',
-    search: {
-      reauth: true,
-    },
-  })
-}
-
 async function queueCall<T>(key: string, call: () => Promise<T>, priority: 'high' | 'low' = 'low'): Promise<T> {
   try {
     return await githubRequestQueue.add(
@@ -88,7 +74,7 @@ async function queueCall<T>(key: string, call: () => Promise<T>, priority: 'high
     )
   } catch (error) {
     if (error instanceof ReauthRequiredError) {
-      handleReauthError()
+      return startReauth()
     }
     throw error
   }
@@ -136,16 +122,11 @@ export function useReleases(
     initialPageParam: 1,
     retry: (failureCount, error) => {
       if (error instanceof ReauthRequiredError) {
-        handleReauthError()
+        return false
       }
       return failureCount < 3
     },
   })
-
-  // Check for reauth error after query completes
-  if (freshQuery.error instanceof ReauthRequiredError) {
-    handleReauthError()
-  }
 
   const cachedItems = cachedQuery.data?.pages.flatMap((page) => page.items) ?? []
   const freshItems = freshQuery.data?.pages.flatMap((page) => page.items) ?? []
@@ -208,16 +189,11 @@ export function usePullRequests(
     initialPageParam: 1,
     retry: (failureCount, error) => {
       if (error instanceof ReauthRequiredError) {
-        handleReauthError()
+        return false
       }
       return failureCount < 3
     },
   })
-
-  // Check for reauth error after query completes
-  if (freshQuery.error instanceof ReauthRequiredError) {
-    handleReauthError()
-  }
 
   const cachedItems = cachedQuery.data?.pages.flatMap((page) => page.items) ?? []
   const freshItems = freshQuery.data?.pages.flatMap((page) => page.items) ?? []
@@ -298,16 +274,11 @@ export function useDiscussions(
     initialPageParam: { cursor: null, uiPage: 1 } as { cursor: string | null; uiPage: number },
     retry: (failureCount, error) => {
       if (error instanceof ReauthRequiredError) {
-        handleReauthError()
+        return false
       }
       return failureCount < 3
     },
   })
-
-  // Check for reauth error after query completes
-  if (freshQuery.error instanceof ReauthRequiredError) {
-    handleReauthError()
-  }
 
   const cachedItems = cachedQuery.data?.pages.flatMap((page) => page.items) ?? []
   const freshItems = freshQuery.data?.pages.flatMap((page) => page.items) ?? []
