@@ -34,6 +34,8 @@ bun --bun run test
 
 GitHub OAuth is used for sign-in identity and authenticated public API rate limits only. The app requests `read:user` and `user:email`; it does not request repository access through the broad classic `repo` scope. Existing sessions with broader stored GitHub scopes are required to re-authenticate so future tokens use the reduced grant.
 
+Public auth and RPC endpoints are rate limited with Upstash Redis so limits are shared across Vercel serverless instances. Configure `REDIS_URL` in production and Vercel previews using the Upstash connection string format `rediss://default:TOKEN@HOST.upstash.io:6379`. Optional tuning variables are `RATE_LIMIT_AUTH_GET_PER_MINUTE`, `RATE_LIMIT_AUTH_POST_PER_MINUTE`, and `RATE_LIMIT_RPC_PER_MINUTE`.
+
 ## Contributing
 
 Contributors can help by improving the dashboard experience, adding or refining update sources, organizing technical categories, and making it easier to explore ongoing Solana engineering work.

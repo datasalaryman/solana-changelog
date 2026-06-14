@@ -3,6 +3,7 @@ import { json } from '@tanstack/react-start'
 import { getEnv } from '../../../env'
 import { getAuth } from '../../../lib/auth'
 import { createRequestId, getErrorDetails, getPublicErrorMessage, logServerError } from '../../../server/errors'
+import { rateLimitRequest } from '../../../server/rateLimit'
 
 function internalErrorResponse(error: unknown, request: Request) {
   const requestId = createRequestId()
@@ -24,6 +25,11 @@ export const Route = createFileRoute('/api/auth/$')({
     handlers: {
       GET: async ({ request }) => {
         try {
+          const rateLimitResponse = await rateLimitRequest(request, 'auth:get')
+          if (rateLimitResponse) {
+            return rateLimitResponse
+          }
+
           const env = getEnv()
           const url = new URL(request.url)
           const fullUrl = new URL(url.pathname + url.search, env.BETTER_AUTH_URL)
@@ -49,6 +55,11 @@ export const Route = createFileRoute('/api/auth/$')({
       },
       POST: async ({ request }) => {
         try {
+          const rateLimitResponse = await rateLimitRequest(request, 'auth:post')
+          if (rateLimitResponse) {
+            return rateLimitResponse
+          }
+
           const env = getEnv()
           const url = new URL(request.url)
           const body = await request.text()

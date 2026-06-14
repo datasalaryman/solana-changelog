@@ -3,6 +3,7 @@ import { RPCHandler } from '@orpc/server/fetch'
 import { createFileRoute } from '@tanstack/react-router'
 import { router } from '../../../server/orpc'
 import { createRequestId, logServerError } from '../../../server/errors'
+import { rateLimitRequest } from '../../../server/rateLimit'
 
 const handler = new RPCHandler(router, {
   interceptors: [
@@ -16,6 +17,11 @@ export const Route = createFileRoute('/api/rpc/$')({
   server: {
     handlers: {
       ANY: async ({ request }) => {
+        const rateLimitResponse = await rateLimitRequest(request, 'rpc')
+        if (rateLimitResponse) {
+          return rateLimitResponse
+        }
+
         const requestId = createRequestId()
         const { response } = await handler.handle(request, {
           prefix: '/api/rpc',
