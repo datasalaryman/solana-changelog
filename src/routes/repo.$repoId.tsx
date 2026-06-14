@@ -19,6 +19,15 @@ export const Route = createFileRoute('/repo/$repoId')({
 
 type TabType = 'releases' | 'pullRequests' | 'discussions'
 
+function GitHubFetchStatus({ isLoading, message }: { isLoading?: boolean; message: string }) {
+  return (
+    <div className="mb-3 flex items-center justify-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--sand)]/40 px-3 py-2 text-sm text-[var(--sea-ink-soft)]">
+      {isLoading && <Loader2 className="h-4 w-4 animate-spin text-[var(--lagoon-deep)]" />}
+      {message}
+    </div>
+  )
+}
+
 function getSafeErrorMessage(error: unknown): string | null {
   if (!error) return null
 
@@ -85,6 +94,7 @@ function RepositoryPage() {
     hasNextPage: hasNextReleases,
     isFetchingNextPage: isFetchingNextReleases,
     isLoading: isLoadingReleases,
+    isRefreshing: isRefreshingReleases,
     isStaleDueToError: isReleasesStale,
     error: releasesError 
   } = useReleases(owner, repoName, { enabled: !!session })
@@ -95,6 +105,7 @@ function RepositoryPage() {
     hasNextPage: hasNextPullRequests,
     isFetchingNextPage: isFetchingNextPullRequests,
     isLoading: isLoadingPRs,
+    isRefreshing: isRefreshingPullRequests,
     isStaleDueToError: isPullRequestsStale,
     error: prsError 
   } = usePullRequests(owner, repoName, { enabled: !!session })
@@ -141,6 +152,8 @@ function RepositoryPage() {
 
   const isLoading = (activeTab === 'releases' && isLoadingReleases) || 
                     (activeTab === 'pullRequests' && isLoadingPRs)
+  const isRefreshing = (activeTab === 'releases' && isRefreshingReleases) ||
+                       (activeTab === 'pullRequests' && isRefreshingPullRequests)
 
   const tabs = [
     { id: 'releases' as TabType, label: 'Releases', icon: Tag },
@@ -156,10 +169,8 @@ function RepositoryPage() {
 
   const error = getError()
   const errorMessage = getSafeErrorMessage(error)
-  const staleMessage = (activeTab === 'releases' && isReleasesStale) ||
-                       (activeTab === 'pullRequests' && isPullRequestsStale)
-    ? 'Showing cached data. GitHub updates could not be fetched.'
-    : null
+  const isStale = (activeTab === 'releases' && isReleasesStale) ||
+                  (activeTab === 'pullRequests' && isPullRequestsStale)
 
   return (
     <DashboardLayout>
@@ -207,16 +218,18 @@ function RepositoryPage() {
           </div>
         )}
 
-        {staleMessage && (
-          <div className="mb-4 rounded-md bg-amber-50 p-4 text-sm text-amber-700">
-            <p>{staleMessage}</p>
-          </div>
-        )}
-
         {isLoading && (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-[var(--lagoon-deep)]" />
           </div>
+        )}
+
+        {!isLoading && !errorMessage && isRefreshing && (
+          <GitHubFetchStatus isLoading message="Loading latest GitHub items..." />
+        )}
+
+        {!isLoading && !errorMessage && !isRefreshing && isStale && (
+          <GitHubFetchStatus message="Showing stale items. GitHub updates could not be fetched." />
         )}
 
         {!isLoading && !errorMessage && activeTab === 'releases' && (
