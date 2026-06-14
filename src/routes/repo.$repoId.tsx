@@ -87,6 +87,7 @@ function RepositoryPage() {
   const { owner, repository: repoName } = repository 
     ? { owner: repository.owner, repository: repository.repository }
     : parseRepoId(repoId)
+  const repositoryUrl = `https://github.com/${encodeURIComponent(owner)}/${encodeURIComponent(repoName)}`
 
   const { 
     data: releases, 
@@ -177,8 +178,15 @@ function RepositoryPage() {
       <div className="mx-auto max-w-4xl">
         <div className="mb-4 sm:mb-6 flex items-center gap-2 sm:gap-3 border-b border-[var(--line)] pb-3 sm:pb-4">
           <GitBranch className="h-4 w-4 sm:h-5 sm:w-5 text-[var(--lagoon-deep)]" />
-          <h1 className="text-base sm:text-lg font-semibold text-[var(--sea-ink)] truncate">
-            {repository.owner}/{repository.repository}
+          <h1 className="truncate text-base font-semibold text-[var(--sea-ink)] sm:text-lg">
+            <a
+              href={repositoryUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="hover:text-[var(--lagoon-deep)] hover:underline"
+            >
+              {repository.owner}/{repository.repository}
+            </a>
           </h1>
         </div>
 
