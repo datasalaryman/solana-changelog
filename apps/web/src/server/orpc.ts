@@ -1,5 +1,4 @@
 import { os } from '@orpc/server'
-import * as z from 'zod'
 import { fetchDiscussions, fetchPullRequests, fetchReleases } from './github'
 import { GitHubServiceError, getPublicErrorMessage, logServerError } from './errors'
 import {
@@ -11,6 +10,7 @@ import {
   upsertReleases,
 } from './githubCache'
 import { getGitHubToken, getUserGitHubToken } from './auth'
+import { batchInput, discussionsInput } from './repositoryInput'
 
 const base = os.$context<{ request: Request; requestId?: string }>().errors({
   REAUTH_REQUIRED: {},
@@ -18,21 +18,6 @@ const base = os.$context<{ request: Request; requestId?: string }>().errors({
   NOT_FOUND: {},
   UPSTREAM_UNAVAILABLE: {},
   INTERNAL_SERVER_ERROR: {},
-})
-
-const repoInput = z.object({
-  owner: z.string().min(1),
-  repository: z.string().min(1),
-})
-
-const batchInput = repoInput.extend({
-  batchPage: z.number().int().min(1).default(1),
-  uiPage: z.number().int().min(1).default(1),
-})
-
-const discussionsInput = repoInput.extend({
-  cursor: z.string().nullable().default(null),
-  uiPage: z.number().int().min(1).default(1),
 })
 
 async function getToken(request: Request, owner: string) {

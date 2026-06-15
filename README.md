@@ -4,6 +4,10 @@ This project is a dashboard of technical updates across the Solana ecosystem. It
 
 The dashboard is meant to be a companion to the weekly Solana Changelog. When readers or listeners want to go deeper on a changelog item, this project should help them discover the relevant technical context, source material, and related updates.
 
+## Monorepo
+
+This repository uses Bun workspaces. The fullstack web app lives in `apps/web`, and root scripts proxy to that app so deployment commands can continue to run from the repository root.
+
 ## Development
 
 Install dependencies:
@@ -28,6 +32,12 @@ Run tests:
 
 ```bash
 bun --bun run test
+```
+
+Run a command directly in the web app workspace:
+
+```bash
+bun --filter solana-engineering-dashboard <script>
 ```
 
 ## Security
