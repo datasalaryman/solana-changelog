@@ -1,0 +1,5 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "buildCommand": "bun --filter solana-engineering-dashboard build && rm -rf .vercel/output && mkdir -p .vercel && cp -R apps/web/.vercel/output .vercel/output"
+}
